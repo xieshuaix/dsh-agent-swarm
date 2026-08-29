@@ -42,10 +42,14 @@ loopback HTTP data plane. The plugin never runs its own LLM loop.
 The embedded bundle is a build of `dsh-agent-swarm-ui` copied to `ui-dist/`:
 
 ```sh
-cd dsh-agent-swarm-ui && pnpm run build
+cd dsh-agent-swarm-ui && FIGMA_PUBLIC_URL=/dsh-agent-swarm/ui pnpm run build
 rm -rf ../dsh-agent-swarm/ui-dist && mkdir -p ../dsh-agent-swarm/ui-dist
 cp -R dist/. ../dsh-agent-swarm/ui-dist/
 ```
+
+`FIGMA_PUBLIC_URL=/dsh-agent-swarm/ui` sets the Vite `base` so the built
+`index.html` references `/dsh-agent-swarm/ui/assets/…` (matching the prefix
+route); without it the assets 404 and the tab renders blank.
 
 Re-run this whenever the ideal UI changes, then reinstall/restart the host.
 
