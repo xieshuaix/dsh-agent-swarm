@@ -32,6 +32,22 @@ loopback HTTP data plane. The plugin never runs its own LLM loop.
 - **`GET/POST /swarm/state`** — loopback-only HTTP data plane the web tab polls.
 - **"Swarm" tab** — a `conversation.view` tab rendering phase, roster cards,
   plan list, and summary, with confirm/cancel actions.
+- **"Ideal UI" tab** — a second `conversation.view` tab that embeds the full
+  ideal swarm UI (`dsh-agent-swarm-ui`, the Figma app) in an iframe served from
+  this plugin at `/dsh-agent-swarm/ui/`. The ideal UI fetches `/swarm/state` on
+  the native DSH origin, so no separate host and no core patch is needed.
+
+### Refreshing the embedded ideal UI
+
+The embedded bundle is a build of `dsh-agent-swarm-ui` copied to `ui-dist/`:
+
+```sh
+cd dsh-agent-swarm-ui && pnpm run build
+rm -rf ../dsh-agent-swarm/ui-dist && mkdir -p ../dsh-agent-swarm/ui-dist
+cp -R dist/. ../dsh-agent-swarm/ui-dist/
+```
+
+Re-run this whenever the ideal UI changes, then reinstall/restart the host.
 
 ## Install
 
