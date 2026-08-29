@@ -383,6 +383,41 @@ test("spawn passes rolePrompt as persona; outlinePlan adds directive and parses 
   }
 });
 
+test("outlined plan is parsed from the child's early assistant message (not the final output)", async () => {
+  const restore = isolateStore();
+  try {
+    const subagents = createFakeSubagents();
+    const sessions = {
+      get: (id) => id ? {
+        id,
+        events: [
+          { type: "assistant/message", data: { message: { content: [
+            { type: "text", text: '```json\n{"plan":[{"title":"scaffold"},{"title":"write files"}]}\n```' }
+          ] } } },
+          { type: "tool/call", data: { name: "todo/write" } },
+          { type: "assistant/message", data: { message: { content: [{ type: "text", text: "Done." }] } } }
+        ]
+      } : undefined,
+      list: () => []
+    };
+    const fake = createFakeCtx({ subagents, sessions });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+
+    await swarm.spawn(SESSION, { id: "a1", name: "Aria", role: "builder", task: "build", outlinePlan: true });
+    // The run's final output has no plan JSON — only the early assistant message does.
+    subagents._pending[0].settle({ stopReason: "completed", output: [{ type: "text", text: "Done." }] });
+    await new Promise((r) => setImmediate(r));
+
+    const agent = swarm.state(SESSION).agents[0];
+    assert.equal(agent.plan.length, 2, "plan recovered from the child session events");
+    assert.equal(agent.plan[0].title, "scaffold");
+    assert.equal(agent.plan[1].title, "write files");
+  } finally {
+    restore();
+  }
+});
+
 test("state() surfaces the child's live todos from todo/write events", async () => {
   const restore = isolateStore();
   try {

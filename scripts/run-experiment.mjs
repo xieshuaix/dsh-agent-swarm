@@ -79,6 +79,9 @@ async function main() {
     content: [{ type: "text", text: "hi" }],
   });
   console.log("agent materialized (session.prompt accepted)");
+  // Give the agent a moment to materialize so `confirm` → `spawn` can resolve
+  // the live parent agent via agentForSession.
+  await sleep(2000);
 
   // 4. Recruit a roster of no-thinking subagents. Two outline a plan; two carry
   //    a role prompt; every task asks for a step-by-step todo + real files so
