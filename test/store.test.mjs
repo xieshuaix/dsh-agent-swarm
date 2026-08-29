@@ -81,6 +81,64 @@ test("coerceSwarm rejects a corrupt/non-v1 record to empty", () => {
   assert.deepEqual(coerceSwarm("nope"), emptySwarm());
 });
 
+// Regression: coerceSwarm used to force `avatarId: "orca"` and
+// `progressMode: "continuous"` onto every agent, which suppressed state()'s
+// per-index avatar/color and discrete-mode derivation (every agent showed the
+// same avatar and never went discrete).
+test("coerceSwarm does not force-default avatarId or progressMode", () => {
+  const swarm = coerceSwarm({
+    version: 1,
+    agents: [{ id: "a1", name: "Aria", role: "b", task: "t", status: "complete", progress: 100 }]
+  });
+  const agent = swarm.agents[0];
+  assert.equal("avatarId" in agent, false, "avatarId must be left unset so state() derives it");
+  assert.equal("progressMode" in agent, false, "progressMode must be left unset so state() derives it");
+});
+
+test("coerceSwarm round-trips plan windows + per-agent evidence + topology", () => {
+  const swarm = coerceSwarm({
+    version: 1,
+    plan: [{ id: "p1", title: "x", status: "done", ownerId: "a1", minProgress: 0, maxProgress: 50 }],
+    agents: [{
+      id: "a1", name: "Aria", role: "b", task: "t", status: "complete", progress: 100,
+      childId: "c1", color: "#123456", avatarId: "orca", progressMode: "discrete",
+      discreteTotal: 2, wave: 1, systemPrompt: "sp", agentsMd: "md",
+      plan: [{ id: "ap1", title: "s", status: "done", ownerId: "a1", minProgress: 0, maxProgress: 100 }],
+      todos: [{ id: "t1", text: "s", done: true }],
+      logs: [{ id: "l1", type: "action", content: "write", tool: "write", minProgress: 0 }],
+      artifacts: [{ id: "f1", name: "a.ts", path: "d/a.ts", size: "3", artifactType: "file", language: "ts", minProgress: 100 }]
+    }],
+    resources: [{ id: "r1", name: "a.ts", rtype: "file", ownerId: "a1", zone: "shared" }],
+    lines: [{ from: "a1", to: "a2", type: "delegates" }],
+    positions: { a1: { x: 1, y: 2 } },
+    permissions: { "a1->a2": { read: true, write: false, execute: false } },
+    messages: [{ id: "m1", role: "assistant", content: "hi", toolCalls: [{ type: "bash", label: "bash", detail: "{}" }] }]
+  });
+
+  assert.equal(swarm.plan[0].minProgress, 0);
+  assert.equal(swarm.plan[0].maxProgress, 50);
+  const a = swarm.agents[0];
+  assert.equal(a.color, "#123456");
+  assert.equal(a.avatarId, "orca");
+  assert.equal(a.progressMode, "discrete");
+  assert.equal(a.discreteTotal, 2);
+  assert.equal(a.wave, 1);
+  assert.equal(a.systemPrompt, "sp");
+  assert.equal(a.agentsMd, "md");
+  assert.equal(a.plan[0].minProgress, 0);
+  assert.equal(a.plan[0].maxProgress, 100);
+  assert.equal(a.todos[0].done, true);
+  assert.equal(a.logs[0].tool, "write");
+  assert.equal(a.logs[0].minProgress, 0);
+  assert.equal(a.artifacts[0].artifactType, "file");
+  assert.equal(a.artifacts[0].language, "ts");
+  assert.equal(swarm.resources[0].rtype, "file");
+  assert.equal(swarm.lines[0].type, "delegates");
+  assert.deepEqual(swarm.positions, { a1: { x: 1, y: 2 } });
+  assert.deepEqual(swarm.permissions, { "a1->a2": { read: true, write: false, execute: false } });
+  assert.equal(swarm.messages[0].toolCalls[0].type, "bash");
+});
+
 test("store load of a missing file starts empty", () => {
   const dir = tempDir();
   try {

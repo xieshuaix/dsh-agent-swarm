@@ -338,6 +338,48 @@ test("registers a callable swarm tool the main agent can drive", async () => {
   }
 });
 
+// Regression for the "no summary / no main-agent orchestration" gap: the swarm
+// tool must drive the FULL lifecycle (recruit → plan → confirm → children settle
+// → summarize) so the projection ends complete WITH a summary, exactly what the
+// main agent does in a real session.
+test("swarm tool drives the full lifecycle to a complete, summarized swarm", async () => {
+  const restore = isolateStore();
+  try {
+    const subagents = createFakeSubagents();
+    const fake = createFakeCtx({ subagents });
+    apply(fake.ctx, {});
+    const tool = fake.registrations.tools.find((t) => t.name === "swarm");
+    const exec = { agent: { id: "a0", session: { id: "s1" } } };
+
+    await tool.execute(
+      { action: "recruit", agents: [
+        { name: "Aria", role: "frontend", task: "build ui", model: "deepseek-v4-flash", reasoningEffort: "off" },
+        { name: "Blake", role: "backend", task: "build api", model: "deepseek-v4-flash", reasoningEffort: "off" }
+      ] },
+      exec
+    );
+    await tool.execute(
+      { action: "plan", plan: [{ title: "ui", ownerId: "aria" }, { title: "api", ownerId: "blake" }], objective: "ship" },
+      exec
+    );
+    const confirmed = await tool.execute({ action: "confirm" }, exec);
+    assert.equal(confirmed.ok, true);
+    assert.equal(confirmed.phase, "executing");
+
+    // Children settle; then the agent summarizes.
+    subagents._pending.forEach((p) => p.settle({ stopReason: "completed", output: [] }));
+    await new Promise((r) => setImmediate(r));
+    const summarized = await tool.execute({ action: "summarize", summary: "shipped" }, exec);
+
+    assert.equal(summarized.ok, true);
+    assert.equal(summarized.phase, "complete");
+    assert.equal(summarized.summary, "shipped");
+    assert.equal(summarized.roster, "Aria[frontend]=complete, Blake[backend]=complete");
+  } finally {
+    restore();
+  }
+});
+
 test("system-prompt context exposes the swarm state to the model", () => {
   const restore = isolateStore();
   try {
