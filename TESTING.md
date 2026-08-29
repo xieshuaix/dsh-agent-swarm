@@ -40,3 +40,28 @@ expected in DSH". It does NOT mock the HTTP layer:
 
 Requirements: a built UI (`vite build` — the `test:e2e` script does it) and a
 Chrome/Chromium on PATH (or `PLAYWRIGHT_PATH` pointing at a `playwright` install).
+
+## Known mistakes & debugging log
+
+Every bug below was found by running the real thing (a live session driving the
+swarm, not just unit tests) and then turned into a regression test so it cannot
+come back silently. The test file/name column is where the guard lives.
+
+| # | Symptom | Root cause | Fix | Regression test |
+|---|---------|-----------|-----|-----------------|
+| 1 | Swarm tab showed `[object Object]` in the phase cell | `kv()` called `String(value)` on a React element | Render the value directly, never stringify | `swarmTab.test.tsx` (`not.toContain("[object Object]")`) |
+| 2 | Raw `status_pending`/`status_done` keys leaked into the tab | client DICT had no plan-status keys | Add `status_pending/in_progress/done` + badges | `swarmTab.test.tsx` (dict-resolving `t`) |
+| 3 | `plan=0` for every `outlinePlan` agent | The plan JSON is emitted in an **early** `assistant/message`, before the tool loop; the run's final `result.output` no longer carries it | `readChildPlan()` scans the child session events; folded live in `state()` | `host-e2e` "outlined plan is parsed from the child's early assistant message" |
+| 4 | Every produced folder stamped with one child's id (artifact over-attribution) | Concurrent spawns share the same `before` snapshot, so `after − before` includes every child's dirs | `childOwnsDir()` prefers the `.dsh-subagent.json` marker, then a child-session event-reference heuristic; `listArtifacts`/`writeMarkersForChild` both filter by ownership | `host-e2e` "artifacts are attributed via … markers" + "state() and completion surface … artifacts" |
+| 5 | Every agent showed `avatar=orca` and `mode=continuous` | `coerceSwarm` force-defaulted `avatarId:"orca"` / `progressMode:"continuous"`, so `state()`'s `?? derivation` never fired | Omit those fields when unset; derive in `state()` | `store` "coerceSwarm does not force-default avatarId or progressMode" |
+| 6 | The main agent could not call `/swarm` — it wandered off reading DSH/plugin source | `/swarm` was a **user** slash command (`ctx.commands.register`), which is NOT in the agent's tool list | Register an agent-facing `swarm` tool via `ctx.tools.register`, with `tools` declared in the module `inject` | `host-e2e` "registers a callable swarm tool" + `apply.smoke` `inject === ["sessions","tools"]` |
+| 7 | Tool `recruit` created agents under random ids, so plan `ownerId`s couldn't reference them | Agent spec without `id` → `recruit()` generated `randomUUID()` | Derive a stable `id` from `name` (same rule as the command) | `host-e2e` tool test (derived `aria` id is findable) |
+| 8 | No summary; session showed no main-agent orchestration | The experiment mutated `/swarm/state` over HTTP instead of letting the main agent drive | The `swarm` tool + a natural prompt; the agent does recruit → plan → confirm → summarize | `host-e2e` "swarm tool drives the full lifecycle to a complete, summarized swarm" |
+| 9 | `model`/`reasoningEffort` carried in the data plane but never shown in the tab | client roster rendering dropped them | Render a `model/effort` tag per agent | `swarmTab.test.tsx` (asserts `deepseek-v4-flash/off`, `Wave`, logs, summary, topology) |
+| 10 | Subagents ignored `reasoningEffort: "off"` (still reasoned) | `AgentOptions` had no `reasoningEffort` field; `dsh-agent-loop` only read provider/model/maxTokens | `scripts/patch-core.mjs` edits `dsh-agent-loop/lib/index.js` to route `reasoningEffort`; re-apply after a DSH upgrade | manual: `grep reasoningEffort …/dsh-agent-loop/lib/index.js` (needs `danger-full-access`) |
+| 11 | Phase stuck `executing` / plan stuck `pending` after all agents settled | No close-out when the last child settled | `closeOut(swarm)` self-heals on read + settlement | `host-e2e` "state() self-heals a stale executing projection" |
+| 12 | Live UI did not re-render on snapshot change | `DshContext` value identity was stable, so React bailed out children | Context value changes identity on tick (`{bridge, tick}`) | `dsh-agent-swarm-ui` `DshContext.test.tsx` |
+
+The pattern to keep: when a real run misbehaves, write the smallest test that
+reproduces the symptom against the fake ctx / store / client bundle, then fix
+until green — so the fix and its reason are pinned together.

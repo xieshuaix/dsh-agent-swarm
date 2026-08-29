@@ -296,6 +296,9 @@ test("/swarm recruit parses model/effort/outline/prompt flags; plan parses multi
   }
 });
 
+// Regression (TESTING.md mistake #6): the /swarm COMMAND (ctx.commands.register)
+// is user-facing and never appears in the agent's tool list — the agent must get
+// a `swarm` TOOL via ctx.tools.register instead.
 test("registers a callable swarm tool the main agent can drive", async () => {
   const restore = isolateStore();
   try {
@@ -511,6 +514,9 @@ test("spawn passes rolePrompt as persona; outlinePlan adds directive and parses 
   }
 });
 
+// Regression (TESTING.md mistake #3): the plan JSON is emitted in an EARLY
+// assistant message, before the tool loop, so the run's final result.output no
+// longer carries it. readChildPlan must recover it from the child session.
 test("outlined plan is parsed from the child's early assistant message (not the final output)", async () => {
   const restore = isolateStore();
   try {
