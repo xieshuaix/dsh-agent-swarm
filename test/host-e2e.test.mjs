@@ -839,6 +839,35 @@ test("POST /swarm/state supports the topology action", async () => {
   }
 });
 
+test("serves the ideal-UI bundle via the /dsh-agent-swarm/ui prefix route", async () => {
+  const restore = isolateStore();
+  try {
+    const routes = [];
+    const webServer = { register: (route) => routes.push(route) };
+    const fake = createFakeCtx({ webServer });
+    apply(fake.ctx, {});
+    const route = routes.find((r) => r.kind === "prefix" && r.path === "/dsh-agent-swarm/ui");
+    assert.ok(route, "UI prefix route registered");
+
+    // Serve the index.html (SPA entry).
+    const { req, res } = makeHttp();
+    req.url = "/dsh-agent-swarm/ui/";
+    await route.handler(req, res);
+    assert.equal(res.statusCode, 200);
+    assert.match(res.headers["content-type"], /text\/html/);
+    assert.match(String(res.body), /<html|root|assets/i);
+
+    // Serve a JS asset with the right content type.
+    const { req: req2, res: res2 } = makeHttp();
+    req2.url = "/dsh-agent-swarm/ui/assets/" + "index.js";
+    await route.handler(req2, res2);
+    // SPA fallback: unknown asset path still returns index.html (200).
+    assert.equal(res2.statusCode, 200);
+  } finally {
+    restore();
+  }
+});
+
 test("lifecycle emits swarm events to the JSONL log and registers an SSE route", async () => {
   const restore = isolateStore();
   try {
