@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { apply } from "../lib/index.js";
@@ -407,6 +407,66 @@ test("state() surfaces the child's live todos from todo/write events", async () 
     assert.equal(agent.todos[1].done, false);
   } finally {
     restore();
+  }
+});
+
+test("state() surfaces the child's live logs from tool/assistant events", async () => {
+  const restore = isolateStore();
+  try {
+    const subagents = createFakeSubagents();
+    const sessions = {
+      get: (id) => id ? { id, events: [
+        { type: "tool/call", data: { name: "write_file" } },
+        { type: "tool/result", data: { message: { content: [{ type: "text", text: "wrote 2 files" }] } } },
+        { type: "assistant/message", data: { message: { content: [{ type: "text", text: "done" }] } } }
+      ] } : undefined,
+      list: () => []
+    };
+    const fake = createFakeCtx({ subagents, sessions });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+
+    await swarm.spawn(SESSION, { id: "a1", name: "Aria", role: "builder", task: "build" });
+    const agent = swarm.state(SESSION).agents[0];
+    assert.ok(Array.isArray(agent.logs), "logs surfaced from child session");
+    assert.deepEqual(agent.logs.map((l) => l.type), ["action", "result", "text"]);
+    assert.equal(agent.logs[0].tool, "write_file");
+    assert.equal(agent.logs[1].content, "wrote 2 files");
+    assert.equal(agent.logs[2].content, "done");
+  } finally {
+    restore();
+  }
+});
+
+test("state() and completion surface the child's produced artifacts", async () => {
+  const restore = isolateStore();
+  let cwd;
+  try {
+    cwd = mkdtempSync(join(tmpdir(), "dsh-agent-swarm-artifacts-"));
+    const subagents = createFakeSubagents();
+    const agents = { get: (id) => id ? { id, session: { id, header: { cwd } }, options: {} } : undefined, list: () => [] };
+    const fake = createFakeCtx({ subagents, agents });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+
+    const spawned = await swarm.spawn(SESSION, { id: "a1", name: "Aria", role: "builder", task: "build" });
+    assert.equal(spawned.ok, true);
+
+    // The child writes a top-level dir + file while it runs.
+    mkdirSync(join(cwd, "shipping"));
+    writeFileSync(join(cwd, "shipping", "index.ts"), "export {}");
+
+    // Settle the one-shot run so the completion path folds artifacts in.
+    subagents._pending[0].settle({ stopReason: "completed", output: [] });
+
+    const agent = swarm.state(SESSION).agents[0];
+    assert.ok(Array.isArray(agent.artifacts), "artifacts surfaced");
+    assert.equal(agent.artifacts.length, 1);
+    assert.equal(agent.artifacts[0].name, "index.ts");
+    assert.equal(agent.artifacts[0].path, "shipping/index.ts");
+  } finally {
+    restore();
+    if (cwd) rmSync(cwd, { recursive: true, force: true });
   }
 });
 
