@@ -296,6 +296,48 @@ test("/swarm recruit parses model/effort/outline/prompt flags; plan parses multi
   }
 });
 
+test("registers a callable swarm tool the main agent can drive", async () => {
+  const restore = isolateStore();
+  try {
+    const subagents = createFakeSubagents();
+    const fake = createFakeCtx({ subagents });
+    apply(fake.ctx, {});
+    const tool = fake.registrations.tools.find((t) => t.name === "swarm");
+    assert.ok(tool, "swarm tool registered");
+
+    const exec = { agent: { id: "a0", session: { id: "s1" } } };
+
+    // recruit → per-agent model/effort/outline plan
+    const recruited = await tool.execute(
+      { action: "recruit", agents: [{ name: "Aria", role: "builder", task: "build", model: "deepseek-v4-flash", reasoningEffort: "off", outlinePlan: true }] },
+      exec
+    );
+    assert.equal(recruited.ok, true);
+    assert.match(recruited.roster, /Aria\[builder\]=queued/);
+
+    const aria = fake.provided.swarm.state({ id: "s1" }).agents.find((a) => a.id === "aria");
+    assert.equal(aria.model, "deepseek-v4-flash");
+    assert.equal(aria.reasoningEffort, "off");
+    assert.equal(aria.outlinePlan, true);
+
+    // plan → objective
+    const planned = await tool.execute(
+      { action: "plan", plan: [{ title: "build", ownerId: "aria" }], objective: "ship it" },
+      exec
+    );
+    assert.equal(planned.ok, true);
+    assert.equal(planned.objective, "ship it");
+
+    // summarize → summary recorded
+    const summarized = await tool.execute({ action: "summarize", summary: "all built" }, exec);
+    assert.equal(summarized.ok, true);
+    assert.equal(summarized.summary, "all built");
+    assert.equal(summarized.phase, "complete");
+  } finally {
+    restore();
+  }
+});
+
 test("system-prompt context exposes the swarm state to the model", () => {
   const restore = isolateStore();
   try {
