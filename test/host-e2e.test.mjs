@@ -288,7 +288,15 @@ test("completion writes a .dsh-subagent.json marker into newly-created folders",
       list: () => []
     };
     const subagents = createFakeSubagents();
-    const fake = createFakeCtx({ subagents, agents });
+    // The child's session references the produced dir (write_file path), the
+    // ownership signal used for artifact attribution under concurrent spawns.
+    const sessions = {
+      get: (id) => (id ? { id, events: [
+        { type: "tool/call", data: { name: "write_file", input: { path: "new-project/index.js" } } }
+      ] } : undefined),
+      list: () => []
+    };
+    const fake = createFakeCtx({ subagents, agents, sessions });
     apply(fake.ctx, {});
     const swarm = fake.provided.swarm;
 
@@ -480,7 +488,13 @@ test("state() and completion surface the child's produced artifacts", async () =
     cwd = mkdtempSync(join(tmpdir(), "dsh-agent-swarm-artifacts-"));
     const subagents = createFakeSubagents();
     const agents = { get: (id) => id ? { id, session: { id, header: { cwd } }, options: {} } : undefined, list: () => [] };
-    const fake = createFakeCtx({ subagents, agents });
+    const sessions = {
+      get: (id) => (id ? { id, events: [
+        { type: "tool/call", data: { name: "write_file", input: { path: "shipping/index.ts" } } }
+      ] } : undefined),
+      list: () => []
+    };
+    const fake = createFakeCtx({ subagents, agents, sessions });
     apply(fake.ctx, {});
     const swarm = fake.provided.swarm;
 
@@ -499,6 +513,39 @@ test("state() and completion surface the child's produced artifacts", async () =
     assert.equal(agent.artifacts.length, 1);
     assert.equal(agent.artifacts[0].name, "index.ts");
     assert.equal(agent.artifacts[0].path, "shipping/index.ts");
+  } finally {
+    restore();
+    if (cwd) rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test("artifacts are attributed via .dsh-subagent.json markers after spawnMeta is lost", async () => {
+  const restore = isolateStore();
+  let cwd;
+  try {
+    cwd = mkdtempSync(join(tmpdir(), "dsh-agent-swarm-markers-"));
+    // Simulate a post-restart state: the store has a completed agent with a
+    // childId, the produced folder carries a provenance marker, but no spawnMeta.
+    mkdirSync(join(cwd, "produced"));
+    writeFileSync(join(cwd, "produced", ".dsh-subagent.json"), JSON.stringify({ subagent: { id: "child-9" } }));
+    writeFileSync(join(cwd, "produced", "app.js"), "console.log(1)");
+    mkdirSync(join(process.env.DSH_HOME, "agent-swarm"), { recursive: true });
+    writeFileSync(join(process.env.DSH_HOME, "agent-swarm", "s1.json"), JSON.stringify({
+      version: 1, id: "swarm-1", phase: "complete", objective: "", plan: [],
+      agents: [{ id: "a1", name: "Aria", role: "builder", task: "build", status: "complete", progress: 100, childId: "child-9" }],
+      summary: null, concurrencyLimit: 3, recruitedCount: 1, completedCount: 1
+    }));
+
+    const agents = { get: (id) => id ? { id, session: { id, header: { cwd } }, options: {} } : undefined, list: () => [] };
+    const fake = createFakeCtx({ agents });
+    apply(fake.ctx, {});
+    const projection = fake.provided.swarm.state({ id: "s1", header: { cwd } });
+
+    const agent = projection.agents[0];
+    assert.ok(Array.isArray(agent.artifacts), "marker-attributed artifacts surfaced");
+    assert.equal(agent.artifacts.length, 1);
+    assert.equal(agent.artifacts[0].name, "app.js");
+    assert.equal(agent.artifacts[0].path, "produced/app.js");
   } finally {
     restore();
     if (cwd) rmSync(cwd, { recursive: true, force: true });
