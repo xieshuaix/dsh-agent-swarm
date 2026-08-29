@@ -13,7 +13,8 @@ function fakeScope(kind) {
   return {
     systemPrompt: { context: () => undefined },
     commands: { register: () => undefined },
-    webServer: { register: () => undefined }
+    webServer: { register: () => undefined },
+    tools: { register: () => undefined }
   };
 }
 

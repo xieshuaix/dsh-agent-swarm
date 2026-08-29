@@ -14,7 +14,7 @@ export function createFakeCtx({ webServer = null, subagents = null, sessions = n
   const provided = {};
   const handlers = { "subagent/start": [], "subagent/end": [], "session/event": [] };
   const injections = [];
-  const registrations = { systemPrompt: [], commands: [], webServer: [] };
+  const registrations = { systemPrompt: [], commands: [], webServer: [], tools: [] };
 
   const defaultSessions = {
     get: (id) => (id ? { id } : undefined),
@@ -55,6 +55,7 @@ export function createFakeCtx({ webServer = null, subagents = null, sessions = n
       if (deps.includes("systemPrompt")) scope.systemPrompt = { context: (cfg) => registrations.systemPrompt.push(cfg) };
       if (deps.includes("commands")) scope.commands = { register: (cmd) => registrations.commands.push(cmd) };
       if (deps.includes("webServer")) scope.webServer = webServer ?? { register: (route) => registrations.webServer.push(route) };
+      if (deps.includes("tools")) scope.tools = { register: (def) => registrations.tools.push(def) };
       callback(scope);
     },
     logger: { info() {}, warn() {}, error() {} }
