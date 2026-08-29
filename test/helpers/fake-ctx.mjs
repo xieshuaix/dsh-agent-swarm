@@ -31,9 +31,10 @@ export function createFakeCtx({ webServer = null, subagents = null, sessions = n
   };
 
   const ctx = {
-    // Cordis injects declared services as properties (inject: ["sessions"]),
+    // Cordis injects declared services as properties (inject: ["sessions","tools"]),
     // while optional services are read lazily via ctx.get(...).
     sessions: sessions ?? defaultSessions,
+    tools: { register: (def) => registrations.tools.push(def) },
     get(service) {
       if (service === "sessions") return sessions ?? defaultSessions;
       if (service === "agents") return agents ?? defaultAgents;
@@ -55,7 +56,6 @@ export function createFakeCtx({ webServer = null, subagents = null, sessions = n
       if (deps.includes("systemPrompt")) scope.systemPrompt = { context: (cfg) => registrations.systemPrompt.push(cfg) };
       if (deps.includes("commands")) scope.commands = { register: (cmd) => registrations.commands.push(cmd) };
       if (deps.includes("webServer")) scope.webServer = webServer ?? { register: (route) => registrations.webServer.push(route) };
-      if (deps.includes("tools")) scope.tools = { register: (def) => registrations.tools.push(def) };
       callback(scope);
     },
     logger: { info() {}, warn() {}, error() {} }

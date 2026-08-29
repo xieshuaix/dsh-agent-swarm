@@ -22,6 +22,7 @@ function makeCtx() {
   const provided = {};
   const registered = []; // injection names seen
   const ctx = {
+    tools: { register: () => undefined },
     get: (service) => {
       if (service === "sessions") return { get: () => undefined, list: () => [] };
       return undefined;
@@ -57,7 +58,7 @@ test("apply registers the systemPrompt, commands, and webServer injections", () 
 
 test("module exports are the expected host-half contract", () => {
   assert.equal(typeof apply, "function");
-  assert.deepEqual(inject, ["sessions"]);
+  assert.deepEqual(inject, ["sessions", "tools"]);
   assert.equal(name, "agent-swarm");
 });
 
