@@ -13,12 +13,14 @@
   },
   "files": [
     "lib",
+    "scripts",
     "cordis.patch.yml",
     "README.md"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "test:unit": "node --test test/store.test.mjs"
+    "test:unit": "node --test test/store.test.mjs",
+    "patch:core": "node scripts/patch-core.mjs"
   },
   "dsh": {
     "bundle": {

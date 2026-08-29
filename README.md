@@ -65,7 +65,7 @@ restart). The authoritative subagent truth stays in `ctx.subagents` and the
 owning session log; the store is a durable cache, never the source of
 orchestration truth.
 
-## Model routing + reasoning effort (core patch)
+## Model routing + reasoning effort (core patch, for fast testing)
 
 `spawn(session, spec)` accepts `model` / `reasoningEffort` / `maxTokens` per
 subagent (the main agent decides by task difficulty/nature):
@@ -77,9 +77,13 @@ subagent (the main agent decides by task difficulty/nature):
   (`dsh-agent-loop` `buildRequest`) does not read `AgentOptions.reasoningEffort`
   by default — the effort falls back to the deployment default.
 
-Apply the core patch once (idempotent), then **restart the host**:
+This patch exists **so experiments stay cheap**: without `"off"`, subagents on a
+reasoning-capable model still spend reasoning tokens (and time). Apply once
+(idempotent), then **restart the host**:
 
 ```sh
+pnpm run patch:core -- --checkout /path/to/@deepseek-ai/dsh
+# or directly:
 node scripts/patch-core.mjs --checkout /path/to/@deepseek-ai/dsh
 ```
 
