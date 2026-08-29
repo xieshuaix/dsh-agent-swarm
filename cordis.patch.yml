@@ -1,0 +1,18 @@
+# dsh-agent-swarm — bundle patch layer.
+#
+# Installing this package into a profile appends it to `dsh.profile.bundles`;
+# this patch is then applied as that bundle's layer. The row loads the
+# package's main entry as the host half: a Cordis plugin that provides
+# `ctx.swarm`, the `/swarm` slash command, model-facing swarm context, and a
+# loopback HTTP data plane (`/swarm/state`) the client tab polls.
+#
+# `config` is optional (every field has a default):
+#   concurrencyLimit   maximum concurrently-running agents (1..64, default 3)
+#   providers          ordered subagent provider names to spawn through;
+#                      defaults to `spawn` → `fork` → first registered
+- insert:
+    - id: agent-swarm
+      name: dsh-agent-swarm
+      config:
+        concurrencyLimit: 3
+        providers: []
