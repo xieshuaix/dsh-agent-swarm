@@ -9,13 +9,13 @@ import { runSessionTest } from "./_run-session-test.mjs";
 
 const PROMPT = `Build a tiny "click counter" web app in this workspace. Keep it minimal — it should take about a minute.
 
-Spawn 4 subagents in parallel. In each subagent's instructions, ask it to first write a quick 2-3 step plan for itself, then do its part:
+Use the swarm tool to recruit 4 subagents, each with model deepseek-v4-flash and reasoningEffort off. Have each subagent write a quick 2-3 step plan first, then do its part:
 1. One writes index.html
 2. One writes style.css
 3. One writes app.js
 4. One writes README.md
 
-When all 4 subagents have finished, write a one-paragraph summary of what was built.`;
+After recruiting, set the plan, confirm execution, and when they finish, record a one-paragraph summary with the swarm tool.`;
 
 runSessionTest(PROMPT, process.argv[2] ?? "006").catch((error) => {
   console.error(`\n❌ ${String(error?.message ?? error)}`);
