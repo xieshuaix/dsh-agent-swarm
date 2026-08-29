@@ -645,6 +645,76 @@ test("state() and completion surface the child's produced artifacts", async () =
   }
 });
 
+// Regression: todos + logs were only folded live from ctx.sessions, which is
+// unloaded after the run, so the agent workspace showed empty later. Completion
+// must persist them (like plan + artifacts).
+test("completion persists todos + logs so they survive child-session unload", async () => {
+  const restore = isolateStore();
+  try {
+    const subagents = createFakeSubagents();
+    const sessions = {
+      get: (id) => (id ? { id, events: [
+        { type: "todo/write", data: { todos: [{ content: "scaffold", status: "completed" }] } },
+        { type: "tool/call", data: { name: "write_file", input: {} } },
+        { type: "tool/result", data: { message: { content: [{ type: "text", text: "wrote" }] } } }
+      ] } : undefined),
+      list: () => []
+    };
+    const fake = createFakeCtx({ subagents, sessions });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+
+    await swarm.spawn(SESSION, { id: "a1", name: "Aria", role: "builder", task: "build" });
+    subagents._pending[0].settle({ stopReason: "completed", output: [] });
+    await new Promise((r) => setImmediate(r));
+
+    // Read the durable store directly (as a later /swarm/state read would),
+    // independent of the now-unloaded child session.
+    const stored = JSON.parse(readFileSync(join(process.env.DSH_HOME, "agent-swarm", "s1.json"), "utf8"));
+    const entry = stored.agents.find((a) => a.id === "a1");
+    assert.equal(entry.todos.length, 1, "todos persisted");
+    assert.equal(entry.todos[0].text, "scaffold");
+    assert.ok(Array.isArray(entry.logs) && entry.logs.length > 0, "logs persisted");
+  } finally {
+    restore();
+  }
+});
+
+// Regression: subagents often write files straight into the workspace ROOT
+// (no folder), which the old top-level-dir-only scan missed → artifacts=0.
+test("root-level files are captured as artifacts (not just top-level dirs)", async () => {
+  const restore = isolateStore();
+  let cwd;
+  try {
+    cwd = mkdtempSync(join(tmpdir(), "dsh-agent-swarm-root-"));
+    const subagents = createFakeSubagents();
+    const agents = { get: (id) => id ? { id, session: { id, header: { cwd } }, options: {} } : undefined, list: () => [] };
+    const sessions = {
+      get: (id) => (id ? { id, events: [
+        { type: "tool/call", data: { name: "write_file", input: { path: "app.js" } } }
+      ] } : undefined),
+      list: () => []
+    };
+    const fake = createFakeCtx({ subagents, agents, sessions });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+
+    await swarm.spawn(SESSION, { id: "a1", name: "Aria", role: "builder", task: "build" });
+    writeFileSync(join(cwd, "app.js"), "console.log(1)"); // no folder — root level
+    subagents._pending[0].settle({ stopReason: "completed", output: [] });
+    await new Promise((r) => setImmediate(r));
+
+    const agent = swarm.state(SESSION).agents[0];
+    assert.ok(Array.isArray(agent.artifacts), "root-file artifact surfaced");
+    assert.equal(agent.artifacts.length, 1);
+    assert.equal(agent.artifacts[0].name, "app.js");
+    assert.equal(agent.artifacts[0].path, "app.js");
+  } finally {
+    restore();
+    if (cwd) rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 test("artifacts are attributed via .dsh-subagent.json markers after spawnMeta is lost", async () => {
   const restore = isolateStore();
   let cwd;
