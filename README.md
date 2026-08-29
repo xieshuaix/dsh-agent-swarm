@@ -65,12 +65,34 @@ restart). The authoritative subagent truth stays in `ctx.subagents` and the
 owning session log; the store is a durable cache, never the source of
 orchestration truth.
 
+## Model routing + reasoning effort (core patch)
+
+`spawn(session, spec)` accepts `model` / `reasoningEffort` / `maxTokens` per
+subagent (the main agent decides by task difficulty/nature):
+
+- `model` — routes the child to a cheap model (e.g. `deepseek-v4-flash`) via
+  `agentOptions`. This works out of the box.
+- `reasoningEffort` — `"off"` (thinking disabled) | `"low"` | `"high"` | `"max"`.
+  Requires the one-time core patch below, because the request-builder
+  (`dsh-agent-loop` `buildRequest`) does not read `AgentOptions.reasoningEffort`
+  by default — the effort falls back to the deployment default.
+
+Apply the core patch once (idempotent), then **restart the host**:
+
+```sh
+node scripts/patch-core.mjs --checkout /path/to/@deepseek-ai/dsh
+```
+
+Re-apply after every DSH upgrade (the patch edits a built package file; an
+upgrade replaces it).
+
 ## Files
 
 ```
 lib/index.js       host half: ctx.swarm service + command + context + HTTP
 lib/client.js      client half: the "Swarm" conversation.view tab
 lib/store.js       durable per-session swarm projection store (unit-tested)
+scripts/patch-core.mjs  one-time core patch: subagent reasoning-effort routing
 cordis.patch.yml   bundle patch layer
 package.json       bundle + client manifests
 ```
