@@ -61,6 +61,7 @@ come back silently. The test file/name column is where the guard lives.
 | 10 | Subagents ignored `reasoningEffort: "off"` (still reasoned) | `AgentOptions` had no `reasoningEffort` field; `dsh-agent-loop` only read provider/model/maxTokens | `scripts/patch-core.mjs` edits `dsh-agent-loop/lib/index.js` to route `reasoningEffort`; re-apply after a DSH upgrade | manual: `grep reasoningEffort …/dsh-agent-loop/lib/index.js` (needs `danger-full-access`) |
 | 11 | Phase stuck `executing` / plan stuck `pending` after all agents settled | No close-out when the last child settled | `closeOut(swarm)` self-heals on read + settlement | `host-e2e` "state() self-heals a stale executing projection" |
 | 12 | Live UI did not re-render on snapshot change | `DshContext` value identity was stable, so React bailed out children | Context value changes identity on tick (`{bridge, tick}`) | `dsh-agent-swarm-ui` `DshContext.test.tsx` |
+| 13 | Ideal UI shell rendered but the SwarmPanel never appeared in live mode | `getFrame()` mapped real parent messages **without** a `swarmPanelId`, and `MessageBubble` only mounts `SwarmPanel` for a message that links one | Attach `swarmPanelId` to the last real message in `getFrame()` | `dsh-agent-swarm-ui` `live.test.ts` "links the SwarmPanel to the LAST real message" |
 
 The pattern to keep: when a real run misbehaves, write the smallest test that
 reproduces the symptom against the fake ctx / store / client bundle, then fix
