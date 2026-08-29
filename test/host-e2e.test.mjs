@@ -470,6 +470,97 @@ test("state() and completion surface the child's produced artifacts", async () =
   }
 });
 
+test("state() derives presentation metadata and topology for the ideal UI", async () => {
+  const restore = isolateStore();
+  try {
+    const cwd = mkdtempSync(join(tmpdir(), "dsh-agent-swarm-topo-"));
+    writeFileSync(join(cwd, "AGENTS.md"), "# agent instructions");
+    const subagents = createFakeSubagents();
+    const agents = { get: (id) => id ? { id, session: { id, header: { cwd } }, options: {} } : undefined, list: () => [] };
+    const fake = createFakeCtx({ subagents, agents });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+    const session = { id: "s1", header: { cwd } };
+
+    swarm.recruit(session, [
+      { id: "aria", name: "Aria", role: "builder", task: "build", outlinePlan: true },
+      { id: "blake", name: "Blake", role: "reviewer", task: "review" }
+    ]);
+    swarm.setPlan(session, [
+      { id: "p1", title: "build", status: "pending", ownerId: "aria" },
+      { id: "p2", title: "review", status: "pending", ownerId: "blake" }
+    ], { objective: "ship" });
+
+    const projection = swarm.state(session);
+
+    // Rows 4, 7, 8: plan windows + deterministic avatar/color.
+    assert.equal(projection.plan[0].minProgress, 0);
+    assert.equal(projection.plan[0].maxProgress, 50);
+    assert.equal(projection.plan[1].maxProgress, 100);
+    assert.equal(typeof projection.agents[0].color, "string");
+    assert.equal(typeof projection.agents[0].avatarId, "string");
+    assert.notEqual(projection.agents[0].avatarId, projection.agents[1].avatarId);
+
+    // Row 5: composed system prompt; row 6: workspace AGENTS.md.
+    assert.match(projection.agents[0].systemPrompt, /Task: build/);
+    assert.equal(projection.agents[0].agentsMd, "# agent instructions");
+
+    // Row 9: discrete progress mode follows an outlined plan; row 16: wave.
+    assert.equal(projection.agents[0].progressMode, "discrete");
+    assert.equal(projection.agents[0].wave, 1);
+
+    // Rows 10, 11: positions + delegation/report edges derived from owners.
+    assert.ok(projection.positions.aria, "position resolved for aria");
+    const lineTypes = projection.lines.map((l) => `${l.from}->${l.to}:${l.type}`);
+    assert.ok(lineTypes.includes("aria->blake:delegates") || lineTypes.includes("blake->aria:delegates"), "delegation edge present");
+    assert.ok(lineTypes.some((l) => l.endsWith(":reports")), "report edge present");
+
+    // Row 14: topology is persistable through the service + POST action.
+    const t = swarm.setTopology(session, {
+      positions: { aria: { x: 10, y: 20 } },
+      lines: [{ from: "aria", to: "blake", type: "delegates" }],
+      permissions: { "aria->blake": { read: true, write: true, execute: false } }
+    });
+    assert.equal(t.ok, true);
+    const after = swarm.state(session);
+    assert.deepEqual(after.positions.aria, { x: 10, y: 20 });
+    assert.deepEqual(after.permissions["aria->blake"], { read: true, write: true, execute: false });
+  } finally {
+    restore();
+  }
+});
+
+test("POST /swarm/state supports the topology action", async () => {
+  const restore = isolateStore();
+  try {
+    const routes = [];
+    const webServer = { register: (route) => routes.push(route) };
+    const subagents = createFakeSubagents();
+    const fake = createFakeCtx({ webServer, subagents });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+    swarm.recruit(SESSION, [{ id: "aria", name: "Aria", role: "builder", task: "build" }]);
+
+    const route = routes.find((r) => r.path === "/swarm/state");
+    const { req, res } = makeHttp();
+    req.method = "POST";
+    req.url = "/swarm/state";
+    const done = route.handler(req, res);
+    req.fireBody(JSON.stringify({
+      session: "s1",
+      action: "topology",
+      topology: { positions: { aria: { x: 5, y: 7 } }, lines: [] }
+    }));
+    await done;
+
+    const body = JSON.parse(res.body);
+    assert.equal(body.ok, true);
+    assert.deepEqual(swarm.state(SESSION).positions.aria, { x: 5, y: 7 });
+  } finally {
+    restore();
+  }
+});
+
 test("lifecycle emits swarm events to the JSONL log and registers an SSE route", async () => {
   const restore = isolateStore();
   try {
