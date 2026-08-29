@@ -260,6 +260,42 @@ test("/swarm slash command drives the lifecycle", async () => {
   }
 });
 
+test("/swarm recruit parses model/effort/outline/prompt flags; plan parses multi-items + owners", async () => {
+  const restore = isolateStore();
+  try {
+    const fake = createFakeCtx();
+    apply(fake.ctx, {});
+    const command = fake.registrations.commands.find((c) => c.name === "swarm");
+    const agent = { session: { id: "s1" } };
+
+    const r1 = await command.handler({ agent, rawInput: 'recruit Aria frontend build the site --model=deepseek-v4-flash --effort=off --outline --prompt="You are a terse engineer"' });
+    assert.equal(r1.kind, "success");
+    assert.match(r1.text, /model=deepseek-v4-flash/);
+    assert.match(r1.text, /effort=off/);
+    assert.match(r1.text, /outline/);
+
+    const s = fake.provided.swarm.state({ id: "s1" });
+    const aria = s.agents.find((a) => a.id === "aria");
+    assert.equal(aria.model, "deepseek-v4-flash");
+    assert.equal(aria.reasoningEffort, "off");
+    assert.equal(aria.outlinePlan, true);
+    assert.equal(aria.rolePrompt, "You are a terse engineer");
+    assert.equal(aria.role, "frontend");
+    assert.equal(aria.task, "build the site");
+
+    const r2 = await command.handler({ agent, rawInput: 'plan build frontend@aria; build api@blake --objective="ship it"' });
+    assert.equal(r2.kind, "success");
+    const swarm = fake.provided.swarm.state({ id: "s1" });
+    assert.equal(swarm.plan.length, 2);
+    assert.equal(swarm.plan[0].ownerId, "aria");
+    assert.equal(swarm.plan[1].ownerId, "blake");
+    assert.equal(swarm.objective, "ship it");
+    assert.equal(swarm.phase, "awaiting_confirm");
+  } finally {
+    restore();
+  }
+});
+
 test("system-prompt context exposes the swarm state to the model", () => {
   const restore = isolateStore();
   try {
