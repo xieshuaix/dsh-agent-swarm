@@ -110,9 +110,10 @@ test("apply registers locale dictionaries and the conversation slots", () => {
   assert.equal(typeof swarm.meta.label, "function");
   assert.equal(swarm.meta.label(), "tab"); // t() is the identity stub
 
-  const tail = fake.registered.slots.find((s) => s.meta.name === "conversation.chat.turnTail");
-  assert.ok(tail, "conversation.chat.turnTail chain slot registered");
-  assert.equal(typeof tail.meta.select, "function");
+  const dock = fake.registered.slots.find((s) => s.meta.name === "conversation.input.dock");
+  assert.ok(dock, "conversation.input.dock slot registered");
+  assert.equal(dock.meta.id, "swarm");
+  assert.equal(typeof dock.meta.order, "number");
 });
 
 test("the slot render function produces a native SwarmView element for a session", () => {
@@ -125,23 +126,6 @@ test("the slot render function produces a native SwarmView element for a session
   assert.ok(element, "render returns an element");
   assert.equal(typeof element.type, "function", "renders the native SwarmView component");
   assert.equal(element.props.sessionId, "s1");
-});
-
-test("the turnTail select narrows on the engine-owned turn boundary", () => {
-  const { module } = loadBundle();
-  const fake = makeFakeCtx();
-  module.apply(fake.ctx);
-  const tail = fake.registered.slots.find((s) => s.meta.name === "conversation.chat.turnTail");
-
-  // select returns objects minted in the vm realm, so assert fields, not
-  // deep-equality (cross-realm prototypes differ).
-  const m1 = tail.meta.select({ turn: { turn: 3 }, seq: 10 });
-  assert.equal(m1.turn, 3);
-  assert.equal(m1.seq, 10);
-  const m2 = tail.meta.select({ turn: 7, seq: 2 });
-  assert.equal(m2.turn, 7);
-  assert.equal(m2.seq, 2);
-  assert.equal(tail.meta.select({ seq: 1 }), null, "no turn boundary declines the chain seat");
 });
 
 test("firstSwarmTurn finds the first dispatching swarm tool call", () => {
@@ -170,27 +154,27 @@ test("firstSwarmTurn finds the first dispatching swarm tool call", () => {
   assert.equal(firstSwarmTurn(readOnly), -1);
 });
 
-test("InlineSwarmTail mounts only at the dispatch turn", () => {
+test("LiveSwarmDock mounts once the swarm is dispatched", () => {
   const { module } = loadBundle();
   const fake = makeFakeCtx();
   module.apply(fake.ctx);
-  const tail = fake.registered.slots.find((s) => s.meta.name === "conversation.chat.turnTail");
-  const { render } = tail;
+  const dock = fake.registered.slots.find((s) => s.meta.name === "conversation.input.dock");
+  const { render } = dock;
   const t = (key) => key;
   // The stub React records elements without running components, so drive the
-  // component body directly through the recorded element.
-  const run = (props) => {
-    const el = render(props);
+  // component body directly through the recorded element. useSession receives
+  // a selector and applies it to a snapshot (the real hook shape).
+  const run = (useSession) => {
+    const el = render({ sessionId: "s1", useSession, t });
     return el.type(el.props);
   };
 
-  const dispatch = run({ sessionId: "s1", useSession: () => 3, matched: { turn: 3, seq: 9 }, t });
-  assert.ok(dispatch, "renders the inline panel at the dispatch turn");
-  assert.equal(dispatch.type, "div", "wraps in a .das-inline card");
+  const dispatched = run((sel) => sel({
+    nodes: [{ kind: "assistant", turn: 1, blocks: [{ kind: "tool-call", name: "swarm", argsRaw: JSON.stringify({ action: "confirm" }) }] }]
+  }));
+  assert.ok(dispatched, "renders the inline panel once the swarm tool is dispatched");
+  assert.equal(dispatched.type, "div", "wraps in a .das-inline card");
 
-  const declined = run({ sessionId: "s1", useSession: () => 3, matched: { turn: 4, seq: 10 }, t });
-  assert.equal(declined, null, "a later turn does not re-mount the panel");
-
-  const none = run({ sessionId: "s1", useSession: () => -1, matched: { turn: 1, seq: 5 }, t });
+  const none = run((sel) => sel({ nodes: [] }));
   assert.equal(none, null, "a session with no swarm renders nothing");
 });

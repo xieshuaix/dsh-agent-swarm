@@ -35,11 +35,14 @@ loopback HTTP data plane. The plugin never runs its own LLM loop.
   inline cards, no iframe. It loads the embed library
   (`/dsh-agent-swarm/ui/ideal-swarm-ui.js`) and calls
   `window.IdealSwarmUI.mount(container, { sessionId })`.
-- **Inline in the chat** — the same ideal SwarmPanel also mounts **at the
-  message where the swarm was dispatched**, via a `conversation.chat.turnTail`
-  chain seat. Placement is detected synchronously from the conversation
+- **Live in the chat** — the same ideal swarm surface mounts **above the
+  composer** (`conversation.input.dock`) as soon as the swarm is dispatched,
+  so the agent cards are visible **while subagents run**, not only after the
+  turn closes. Placement is detected synchronously from the conversation
   snapshot (the first assistant turn that called the `swarm` tool with
-  `recruit`/`plan`/`confirm`); the panel then live-polls `/swarm/state`.
+  `recruit`/`plan`/`confirm`); the panel then live-polls `/swarm/state`. The
+  embed is fully interactive — agent click opens the detail popup, the canvas
+  opens the orchestrator board, and the tasks/percent toggle works.
 
 ### Refreshing the embedded ideal UI
 
