@@ -1,5 +1,10 @@
 # dsh-agent-swarm — plan
 
+> **Status: complete (historical).** Everything below was implemented. For the
+> current state, read `README.md` (install/demo tests), `docs/DSH_FRAMEWORK.md`
+> (host/client/BE↔FE wiring), and `docs/DEBUGGING.md` (troubleshooting). This
+> file is kept as the original design record.
+
 Multi-agent orchestration in a DSH session. The **main agent** recruits
 subagents, plans the orchestration (itself or by delegating planning to one
 subagent), executes, then summarizes. The whole lifecycle is observable to the

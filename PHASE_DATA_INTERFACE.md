@@ -1,5 +1,10 @@
 # PHASE — data interface (swarm tab as the primitive UI)
 
+> **Status: complete (historical).** The data interface described here is fully
+> wired — see `dsh-agent-swarm-ui/SWARM_DATA_GAP.md` (current data table) and
+> `dsh-agent-swarm-ui/SWARM_PROTOCOL.md` (current protocol). This file records
+> the original milestone.
+
 Goal: make the swarm tab show **every** piece of data the ideal UI needs (per
 `SWARM_DATA_GAP.md`), with **matching state evolution**, then hand off to
 branch 3 for the real UI.
