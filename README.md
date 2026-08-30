@@ -48,14 +48,17 @@ loopback HTTP data plane. The plugin never runs its own LLM loop.
 The ideal UI's **source** lives in the separate `dsh-agent-swarm-ui` repo; this
 repo only carries its **built bundle** in `ui-dist/`. `ui-dist/` holds the
 embed library — an IIFE build (`ideal-swarm-ui.js` + `ideal-swarm-ui.css`) that
-exposes `window.IdealSwarmUI.mount(container, { sessionId })`. Rebuild it
-whenever `dsh-agent-swarm-ui` changes:
+exposes `window.IdealSwarmUI.mount(container, { sessionId })`. Rebuild + sync it
+whenever `dsh-agent-swarm-ui` changes (one command, from the UI repo):
 
 ```sh
 cd dsh-agent-swarm-ui
-pnpm exec vite build --config vite.lib.config.ts
-cp dist-embed/ideal-swarm-ui.js dist-embed/ideal-swarm-ui.css ../dsh-agent-swarm/ui-dist/
+pnpm build:plugin      # builds dist-embed/ and copies into ../dsh-agent-swarm/ui-dist/
 ```
+
+This also writes `ui-dist/version.json` (`{ uiVersion, uiCommit, builtAt }`) so
+you can tell which UI commit produced the bundle. See the UI repo's `BUILD.md`
+for the full reproducible guide.
 
 Then **refresh the browser** — the client half is served from the plugin's
 `lib/client.js` and re-read per request, so no host restart is needed for
