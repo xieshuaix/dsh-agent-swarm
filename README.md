@@ -1,8 +1,9 @@
 # dsh-agent-swarm
 
 An efficient, organized way to **spawn and manage large numbers of subagents** in
-a DeepSeek Harness session. It extends the DSH native subagent system: the **main
-agent** recruits subagents, plans the orchestration (its own plan, or by
+a **controllable and observable** way, in a DeepSeek Harness session. It extends
+the DSH native subagent system: the **main agent** recruits subagents, plans the
+orchestration (its own plan, or by
 **delegating planning to one subagent**), gets it **confirmed** before running,
 executes, and **summarizes** at the end — the whole lifecycle observable live in
 the web UI and to the model. Drive it by describing the task in **natural
