@@ -34,13 +34,14 @@ loopback HTTP data plane. The plugin never runs its own LLM loop.
   (phase, objective, roster, plan, summary) polled from `/swarm/state` — no
   complicated UI.
 - **Ideal card in the chat** — the **ideal** SwarmPanel (rich, interactive
-  agent cards) mounts as a **card inline at the message where the swarm was
-  dispatched** (`conversation.chat.turnTail`), not as a full-width panel.
-  Placement is detected synchronously from the conversation snapshot (the
-  first assistant turn that called the `swarm` tool with `recruit`/`plan`/
-  `confirm`). The embed is fully interactive — agent click opens the detail
-  popup, the canvas opens the orchestrator board, and the tasks/percent toggle
-  works.
+  agent cards) mounts as a **live, centered 720px card above the composer**
+  (`conversation.input.dock`), appearing **as soon as the swarm is dispatched**
+  (from recruiting onward), not only after the turn closes. Placement is
+  detected synchronously from the conversation snapshot (the first assistant
+  turn that called the `swarm` tool with `recruit`/`plan`/`confirm`); the panel
+  then live-polls `/swarm/state`. The embed is fully interactive — agent click
+  opens the detail popup, the canvas opens the orchestrator board, and the
+  tasks/percent toggle works.
 
 ### Refreshing the embedded ideal UI
 
