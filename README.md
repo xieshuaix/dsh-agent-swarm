@@ -45,10 +45,11 @@ loopback HTTP data plane. The plugin never runs its own LLM loop.
 
 ### Refreshing the embedded ideal UI
 
-`ui-dist/` holds the ideal UI's **embed library** — an IIFE build
-(`ideal-swarm-ui.js` + `ideal-swarm-ui.css`) that exposes
-`window.IdealSwarmUI.mount(container, { sessionId })`. Rebuild it whenever
-`dsh-agent-swarm-ui` changes:
+The ideal UI's **source** lives in the separate `dsh-agent-swarm-ui` repo; this
+repo only carries its **built bundle** in `ui-dist/`. `ui-dist/` holds the
+embed library — an IIFE build (`ideal-swarm-ui.js` + `ideal-swarm-ui.css`) that
+exposes `window.IdealSwarmUI.mount(container, { sessionId })`. Rebuild it
+whenever `dsh-agent-swarm-ui` changes:
 
 ```sh
 cd dsh-agent-swarm-ui
@@ -63,11 +64,28 @@ host-half `lib/index.js` changes).
 
 ## Install
 
-From inside the profile directory (e.g. `$DSH_HOME/profiles/web`):
+One line, from npm (once published):
+
+```sh
+dsh plugin --profile web add dsh-agent-swarm
+```
+
+Or straight from git — no publish step needed:
+
+```sh
+dsh plugin --profile web add git+https://github.com/<you>/dsh-agent-swarm.git
+```
+
+Or from a local checkout (development):
 
 ```sh
 dsh plugin --profile web add file:/path/to/dsh-agent-swarm
 ```
+
+The package is **self-contained**: it bundles `lib/` (host + client halves),
+`ui-dist/` (the built ideal-UI embed library), and `cordis.patch.yml`. Installing
+requires **no separate UI repo, no build step, and no submodule** — the ideal UI
+ships inside this one package.
 
 This appends `dsh-agent-swarm` to `dsh.profile.bundles`. Restart the host once
 to load it; the **Swarm** tab then appears in the conversation view ring beside
@@ -124,6 +142,7 @@ upgrade replaces it).
 lib/index.js       host half: ctx.swarm service + command + context + HTTP
 lib/client.js      client half: native ideal-UI "Swarm" tab + inline turnTail
 lib/store.js       durable per-session swarm projection store (unit-tested)
+ui-dist/           built ideal-UI embed library (shipped in the package)
 scripts/patch-core.mjs  one-time core patch: subagent reasoning-effort routing
 scripts/verify-inline-chat.mjs  browser check: inline cards + Swarm tab
 cordis.patch.yml   bundle patch layer
