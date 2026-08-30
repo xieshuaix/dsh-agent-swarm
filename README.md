@@ -178,16 +178,10 @@ Or from a local checkout (development — `link:` keeps it a live symlink):
 dsh plugin --profile web add link:/path/to/dsh-agent-swarm
 ```
 
-Or from npm once published:
-
-```sh
-dsh plugin --profile web add dsh-agent-swarm
-```
-
 The package is **self-contained**: it bundles `lib/` (host + client halves),
-`ui-dist/` (the built ideal-UI embed library), and `cordis.patch.yml`. Installing
-requires **no separate UI repo, no build step, and no submodule** — the ideal UI
-ships inside this one package.
+`ui-dist/` (the built ideal-UI embed library), `cordis.patch.yml`, `scripts/`, and
+`docs/`. Installing requires **no separate UI repo, no build step, and no
+submodule** — the ideal UI ships inside this one package.
 
 This appends `dsh-agent-swarm` to `dsh.profile.bundles`. Restart the host once
 to load it; the **Swarm** tab then appears in the conversation view ring beside
