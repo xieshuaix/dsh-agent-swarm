@@ -103,11 +103,11 @@ the main agent through a full swarm lifecycle (recruit → plan → confirm →
 execute → summarize). They require a running host with the plugin installed (see
 [Install](#install)).
 
-| Script | What it builds | Agents | Duration |
-|---|---|---|---|
-| `node scripts/run-swarm-session-test-toy.mjs [round]` | **Toy** — minimal click-counter web app. The smallest working end-to-end test. | 4 | ~1–2 min |
-| `node scripts/run-swarm-session-test-search-fe.mjs [round]` | **Search (multi-modal)** — frontend + embedding backend + API schema + smoke tests. | 4 | ~2–5 min |
-| `node scripts/run-swarm-session-test-scale.mjs [round]` | **Scale** — 20 theme designers at concurrency 5, each writing one CSS theme + a doc. | 20 (concurrency 5) | ~2–4 min |
+| Script | What it builds | Agents | Best for | Duration |
+|---|---|---|---|---|
+| `node scripts/run-swarm-session-test-toy.mjs [round]` | **Toy** — minimal click-counter web app. | 4 | **Fast, minimal workable test** | ~1–2 min |
+| `node scripts/run-swarm-session-test-search-fe.mjs [round]` | **Search (multi-modal)** — frontend + embedding backend + API schema + smoke tests. | 4 | **Long-running** multi-modal task | 10 min+ |
+| `node scripts/run-swarm-session-test-scale.mjs [round]` | **Scale** — 20 theme designers at concurrency 5, each writing one CSS theme + a doc. | 20 (concurrency 5) | **Massive multi-agent** example | ~2–4 min |
 
 Every runner finishes with a per-agent table and an at-a-glance check:
 
