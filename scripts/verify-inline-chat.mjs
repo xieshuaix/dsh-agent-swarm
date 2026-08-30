@@ -41,13 +41,27 @@ async function main() {
 
     // Open the completed swarm session from the sidebar. The "Swarm
     // Experiments" workspace is collapsed by default; unfold it, then click the
-    // session title. All clicks are awaited individually so a mid-list toggle
-    // cannot hide the target.
+    // session title. The session list is grouped by workspace and older entries
+    // are collapsed behind an "展开…" expander. Unfold those first (clicking the
+    // workspace heading itself toggles it, so avoid it unless the target is
+    // still hidden after unfolding).
     const title = page.getByText(SESSION_TITLE, { exact: true }).first();
-    const workspace = page.getByText("Swarm Experiments", { exact: true }).first();
-    if (await workspace.count().catch(() => 0)) {
-      await workspace.click().catch(() => {});
-      await page.waitForTimeout(700);
+    async function unfold() {
+      for (let round = 0; round < 4; round++) {
+        const expanders = page.getByText(/^展开/);
+        const count = await expanders.count().catch(() => 0);
+        if (count === 0) break;
+        for (let i = 0; i < count; i++) {
+          await expanders.nth(i).click().catch(() => {});
+          await page.waitForTimeout(300);
+        }
+      }
+    }
+    await unfold();
+    if (!(await title.isVisible().catch(() => false))) {
+      await page.getByText("Swarm Experiments", { exact: true }).first().click().catch(() => {});
+      await page.waitForTimeout(400);
+      await unfold();
     }
     try {
       await title.waitFor({ state: "visible", timeout: 15000 });
