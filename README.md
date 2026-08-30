@@ -243,8 +243,7 @@ Building on or modifying this code? Start here:
 - **[docs/DEBUGGING.md](docs/DEBUGGING.md)** — tools, guidance, and where to
   look for each bug class.
 - **[BOOTSTRAP.md](BOOTSTRAP.md)** · **[TESTING.md](TESTING.md)** — bootstrap
-  orientation and the test/known-bugs log. *(Historical: `DEV_PLAN.md`,
-  `PHASE_DATA_INTERFACE.md`.)*
+  orientation and the test/known-bugs log.
 
 The UI's **source** lives in a separate repo, `dsh-agent-swarm-ui`; this repo
 only ships its **built bundle** in `ui-dist/`. See that repo's
@@ -252,10 +251,11 @@ only ships its **built bundle** in `ui-dist/`. See that repo's
 and **[BUILD.md](https://github.com/xieshuaix/dsh-agent-swarm-ui/blob/main/BUILD.md)**
 for the component map and the reproducible build/sync steps.
 
-> `docs/` ships in the package; the root `BOOTSTRAP.md` / `TESTING.md` /
-> `DEV_PLAN.md` / `PHASE_DATA_INTERFACE.md` and the `test/` directory are
-> **source-checkout only** (they're not in `package.json` `files`). Clone the
-> source repo to read them.
+Closed development plans are archived under **[docs/archive/](docs/archive/)**.
+
+> `docs/` ships in the package; the root `BOOTSTRAP.md` / `TESTING.md` and the
+> `test/` directory are **source-checkout only** (they're not in `package.json`
+> `files`). Clone the source repo to read them.
 
 ## Tests
 
