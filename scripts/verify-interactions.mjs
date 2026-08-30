@@ -107,7 +107,9 @@ async function main() {
     check("canvas agent panel has Open Workspace", await openWsBtn.isVisible().catch(() => false));
     await openWsBtn.click({ timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(1400);
-    const wsOpen = (await page.getByText("Artifacts", { exact: true }).count().catch(() => 0)) >= 1;
+    // The workspace panel's "Artifacts" tab may carry a count badge ("Artifacts3"),
+    // so match by role+name prefix, not exact text.
+    const wsOpen = (await page.getByRole("button", { name: /^Artifacts/ }).count().catch(() => 0)) >= 1;
     check("open workspace (from canvas) opens the agent panel", wsOpen);
     const canvasStillOpen = (await page.getByTestId("link-count").count().catch(() => 0)) >= 1;
     check("canvas stays open under the agent panel", canvasStillOpen);
