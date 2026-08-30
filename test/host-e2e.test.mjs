@@ -1017,3 +1017,39 @@ test("recruit → confirm propagates per-agent model, rolePrompt, and outlinePla
     restore();
   }
 });
+
+// Regression: `concurrency` on recruit must actually limit how many subagents
+// run at once — confirm drains in waves of `concurrencyLimit`, spawning the next
+// wave only after the current one settles.
+test("confirm drains subagents in waves of concurrencyLimit", async () => {
+  const restore = isolateStore();
+  try {
+    const subagents = createFakeSubagents();
+    const fake = createFakeCtx({ subagents });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+
+    const agents = Array.from({ length: 6 }, (_, i) => ({
+      id: `a${i + 1}`, name: `Agent ${i + 1}`, role: "worker", task: `task ${i + 1}`
+    }));
+    swarm.recruit(SESSION, agents, 2); // concurrency 2 → 3 waves of 2
+    swarm.setPlan(SESSION, agents.map((a) => ({ id: `p${a.id}`, title: a.task, ownerId: a.id })), { objective: "ship" });
+    await swarm.confirm(SESSION);
+
+    const flush = () => new Promise((r) => setImmediate(() => setImmediate(r)));
+    // Wave 1 spawns immediately (confirm does not block).
+    assert.equal(subagents.calls.length, 2, "wave 1 spawned");
+
+    subagents._pending[0].settle({ stopReason: "completed", output: [] });
+    subagents._pending[1].settle({ stopReason: "completed", output: [] });
+    await flush();
+    assert.equal(subagents.calls.length, 4, "wave 2 spawned after wave 1 settled");
+
+    subagents._pending[2].settle({ stopReason: "completed", output: [] });
+    subagents._pending[3].settle({ stopReason: "completed", output: [] });
+    await flush();
+    assert.equal(subagents.calls.length, 6, "wave 3 spawned after wave 2 settled");
+  } finally {
+    restore();
+  }
+});
