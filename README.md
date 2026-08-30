@@ -1,29 +1,18 @@
 # dsh-agent-swarm
 
-Multi-agent orchestration in a DeepSeek Harness session. The **main agent**
-recruits subagents, plans the orchestration (its own plan, or by **delegating
-planning to one subagent**), gets it **confirmed** before running, executes, and
-**summarizes** at the end — with the whole lifecycle observable live in the web
-UI and to the model.
+An efficient, organized way to **spawn and manage large numbers of subagents** in
+a DeepSeek Harness session. It extends the DSH native subagent system: the **main
+agent** recruits subagents, plans the orchestration (its own plan, or by
+**delegating planning to one subagent**), gets it **confirmed** before running,
+executes, and **summarizes** at the end — the whole lifecycle observable live in
+the web UI and to the model. Drive it by describing the task in **natural
+language** (the main agent orchestrates via the `swarm` tool), or directly via the
+**`/swarm` command**.
 
 Implements the *"dsh-agent-swarm"* extension idea as a self-contained Cordis
 plugin over the harness's real subagent seam (`ctx.subagents`). No core/harness
 patch is required for basic use; a one-time plugin install + host restart is all
 it takes.
-
-## Version
-
-The latest workable release is tagged **`v0.1.0`** on both repos:
-
-| Repo | Tag |
-|---|---|
-| [`xieshuaix/dsh-agent-swarm`](https://github.com/xieshuaix/dsh-agent-swarm) — the plugin | `v0.1.0` |
-| [`xieshuaix/dsh-agent-swarm-ui`](https://github.com/xieshuaix/dsh-agent-swarm-ui) — the UI source | `v0.1.0` |
-
-The plugin's committed `ui-dist/` is built from the UI repo at `v0.1.0` (see
-`ui-dist/version.json` for the exact UI commit). For a developer, that tag pair is
-the known-working combination: check out both repos at `v0.1.0`, then run
-`pnpm build:plugin` in the UI repo to rebuild/sync the embed into the plugin.
 
 ## Highlights
 
@@ -50,6 +39,22 @@ the known-working combination: check out both repos at `v0.1.0`, then run
 </p>
 
 *A single agent's workspace panel showing the artifacts it produced.*
+
+## Version
+
+The latest workable release is tagged **`v0.1.0`** on both repos:
+
+| Repo | Tag |
+|---|---|
+| [`xieshuaix/dsh-agent-swarm`](https://github.com/xieshuaix/dsh-agent-swarm) — the plugin | `v0.1.0` |
+| [`xieshuaix/dsh-agent-swarm-ui`](https://github.com/xieshuaix/dsh-agent-swarm-ui) — the UI source | `v0.1.0` |
+
+The plugin ships **prebuilt** — its committed `ui-dist/` already contains the
+built ideal-UI embed library, so installing the plugin alone is fully
+self-contained (no UI repo, no build step). The `dsh-agent-swarm-ui` repo is only
+needed when **developing** the UI. For a developer, the known-working combination
+is to check out both repos at `v0.1.0`, then run `pnpm build:plugin` in the UI
+repo to rebuild/sync the embed (`ui-dist/version.json` records the exact UI commit).
 
 ## Features
 
