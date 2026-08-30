@@ -823,6 +823,12 @@ test("files in a shared directory are attributed per file, not per directory", a
     const byName = Object.fromEntries(projection.agents.map((a) => [a.name, (a.artifacts ?? []).map((x) => x.name)]));
     assert.deepEqual(byName.Ocean, ["01-ocean.css"]);
     assert.deepEqual(byName.Sunset, ["02-sunset.css"]);
+
+    // Each derived canvas resource lives in its OWNING agent's exclusive zone.
+    assert.equal(projection.resources.length, 2);
+    for (const res of projection.resources) {
+      assert.equal(res.zone, res.ownerId, `${res.name} should be in its owner's exclusive zone`);
+    }
   } finally {
     restore();
     if (cwd) rmSync(cwd, { recursive: true, force: true });
