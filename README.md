@@ -298,5 +298,3 @@ node --test test/client.test.mjs      # client half only
 ```
 
 See [Try it out](#try-it-out) for the end-to-end demo runners.
-
-See [Try it out](#try-it-out) for the end-to-end demo runners.
