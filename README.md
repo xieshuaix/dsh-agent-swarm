@@ -217,19 +217,36 @@ subagent (the main agent decides by task difficulty/nature):
 - `model` — routes the child to a cheap model (e.g. `deepseek-v4-flash`) via
   `agentOptions`. Works out of the box.
 - `reasoningEffort` — `"off"` | `"low"` | `"high"` | `"max"`. Requires the
-  one-time core patch below, because the request-builder
-  (`dsh-agent-loop` `buildRequest`) does not read `AgentOptions.reasoningEffort`
-  by default.
+  one-time core patch below.
 
-This patch exists **so experiments stay cheap** — without `"off"`, subagents on a
-reasoning-capable model still spend reasoning tokens. Apply once (idempotent),
-then restart the host:
+### Core patch: control reasoning effort (for fast, low-cost testing)
+
+By default the subagent request-builder (`dsh-agent-loop` `buildRequest`) ignores
+`AgentOptions.reasoningEffort` and falls back to the deployment default ("high"),
+so even a `deepseek-v4-flash` subagent still spends reasoning tokens. This plugin
+ships a **minimal, additive, backward-compatible core patch** that lets
+`AgentOptions.reasoningEffort` win — so you can turn thinking **off** and keep
+experiments fast and cheap.
+
+It is **not applied automatically** on install — run it explicitly, then restart
+the host once:
 
 ```sh
 node scripts/patch-core.mjs --checkout /path/to/@deepseek-ai/dsh
 ```
 
-Re-apply after every DSH upgrade.
+Idempotent (re-running reports "already patched"); each patched file gets a
+`.dsh-agent-swarm.bak` backup. Re-apply after every DSH upgrade.
+
+**Rollback** (restores the backup, then deletes it):
+
+```sh
+node scripts/patch-core.mjs --checkout /path/to/@deepseek-ai/dsh --rollback
+```
+
+**Verified against DSH `0.1.1-rc.2`** (`@deepseek-ai/dsh-agent-loop`
+`lib/index.js`). On any other version the script fails with *"target not found"*
+instead of corrupting the file — patch manually or upgrade the plugin.
 
 ## Surfaces
 
