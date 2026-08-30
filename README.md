@@ -91,8 +91,9 @@ limit** (default 3, configurable 1–64) caps how many subagents run at once.
 | **Confirm / execute** | `ctx.swarm.confirm(...)` moves `awaiting_confirm → executing`; subagent `subagent/start` / `subagent/end` lifecycle edges update roster status and progress. |
 | **Summarize** | `ctx.swarm.summarize(session, text)` closes the swarm and records the summary. |
 
-The **main agent** drives these through the `/swarm` slash command (and the
-model-facing swarm-state context); the **web UI** drives them through the
+The **main agent** drives these through the agent-facing `swarm` **tool** (and
+the model-facing swarm-state context); the `/swarm` slash command is the
+equivalent **user-facing** control. The **web UI** drives them through the
 loopback HTTP data plane. The plugin never runs its own LLM loop.
 
 ## Try it out
@@ -118,24 +119,35 @@ agents with own plan: N/N; agents with >=1 artifact: N/N
 workspace). Watch the swarm card in the chat (or the **Swarm** tab) to see the
 lifecycle live.
 
-## Install
-
-One line, from npm (once published):
+Environment overrides (defaults shown):
 
 ```sh
-dsh plugin --profile web add dsh-agent-swarm
+DSH_HOME_URL=http://127.0.0.1:3080          # host to drive
+DSH_SWARM_TESTS_DIR=<parent>/dsh-agent-swarm-tests   # where isolated workspaces land
 ```
 
-Or straight from git — no publish step needed:
+> The demo prompts use `reasoningEffort: "off"`, which is a **no-op without the
+> one-time core patch** (see [Model routing](#model-routing--reasoning-effort)).
+> The demos still run without it — they just spend reasoning tokens.
+
+## Install
+
+Straight from git (the primary path today):
 
 ```sh
 dsh plugin --profile web add git+https://github.com/xieshuaix/dsh-agent-swarm.git
 ```
 
-Or from a local checkout (development):
+Or from a local checkout (development — `link:` keeps it a live symlink):
 
 ```sh
-dsh plugin --profile web add file:/path/to/dsh-agent-swarm
+dsh plugin --profile web add link:/path/to/dsh-agent-swarm
+```
+
+Or from npm once published:
+
+```sh
+dsh plugin --profile web add dsh-agent-swarm
 ```
 
 The package is **self-contained**: it bundles `lib/` (host + client halves),
@@ -157,6 +169,8 @@ The bundle `config` is optional (all keys have defaults):
   config:
     concurrencyLimit: 3        # 1..64, default 3
     providers: []              # spawn → fork → first registered, default []
+    model: null                # default model for spawned subagents (null = provider default)
+    reasoningEffort: null      # default effort for spawned subagents (null = deployment default)
 ```
 
 ## Persistence
@@ -192,7 +206,7 @@ Re-apply after every DSH upgrade.
 ## Surfaces
 
 - **`ctx.swarm`** — first-class service: `state`, `recruit`, `setPlan`,
-  `delegatePlan`, `spawn`, `confirm`, `cancel`, `summarize`.
+  `setTopology`, `delegatePlan`, `spawn`, `confirm`, `cancel`, `summarize`.
 - **`/swarm`** slash command — `list | recruit | plan | confirm | cancel | summarize`.
 - **system-prompt context** — the active session's swarm phase, objective,
   roster, and plan are injected into the model's context.
@@ -206,14 +220,18 @@ Re-apply after every DSH upgrade.
 ## Files
 
 ```
-lib/index.js       host half: ctx.swarm service + command + context + HTTP
+lib/index.js       host half: ctx.swarm service + tool + command + context + HTTP
 lib/client.js      client half: native ideal-UI "Swarm" tab + inline chat card
 lib/store.js       durable per-session swarm projection store (unit-tested)
 ui-dist/           built ideal-UI embed library (shipped in the package)
+test/              unit + host-e2e + client tests (source checkout only)
+scripts/_run-session-test.mjs  shared runner for the demo session tests
+scripts/run-swarm-session-test-*.mjs  toy / search-fe / scale demo tests
+scripts/verify-*.mjs  browser + data-completeness checks
 scripts/patch-core.mjs  one-time core patch: subagent reasoning-effort routing
 cordis.patch.yml   bundle patch layer
 package.json       bundle + client manifests
-docs/screenshots/  the screenshots used throughout this README
+docs/              framework + debugging docs, and screenshots
 ```
 
 ## Developer docs
@@ -224,9 +242,9 @@ Building on or modifying this code? Start here:
   client / BE↔FE wiring), the contracts this plugin relies on.
 - **[docs/DEBUGGING.md](docs/DEBUGGING.md)** — tools, guidance, and where to
   look for each bug class.
-- **[BOOTSTRAP.md](BOOTSTRAP.md)** · **[DEV_PLAN.md](DEV_PLAN.md)** ·
-  **[PHASE_DATA_INTERFACE.md](PHASE_DATA_INTERFACE.md)** · **[TESTING.md](TESTING.md)**
-  — bootstrap, plan, data-plane, and testing notes.
+- **[BOOTSTRAP.md](BOOTSTRAP.md)** · **[TESTING.md](TESTING.md)** — bootstrap
+  orientation and the test/known-bugs log. *(Historical: `DEV_PLAN.md`,
+  `PHASE_DATA_INTERFACE.md`.)*
 
 The UI's **source** lives in a separate repo, `dsh-agent-swarm-ui`; this repo
 only ships its **built bundle** in `ui-dist/`. See that repo's
@@ -234,10 +252,22 @@ only ships its **built bundle** in `ui-dist/`. See that repo's
 and **[BUILD.md](https://github.com/xieshuaix/dsh-agent-swarm-ui/blob/main/BUILD.md)**
 for the component map and the reproducible build/sync steps.
 
+> `docs/` ships in the package; the root `BOOTSTRAP.md` / `TESTING.md` /
+> `DEV_PLAN.md` / `PHASE_DATA_INTERFACE.md` and the `test/` directory are
+> **source-checkout only** (they're not in `package.json` `files`). Clone the
+> source repo to read them.
+
 ## Tests
 
+Run from a source checkout (the `test/` directory isn't shipped):
+
 ```sh
-node --test test/*.test.mjs    # host half + client half + store — no host needed
+node --test test/*.test.mjs           # all: store + host-e2e + client + apply smoke
+node --test test/store.test.mjs       # store only
+node --test test/host-e2e.test.mjs    # host half only
+node --test test/client.test.mjs      # client half only
 ```
+
+See [Try it out](#try-it-out) for the end-to-end demo runners.
 
 See [Try it out](#try-it-out) for the end-to-end demo runners.

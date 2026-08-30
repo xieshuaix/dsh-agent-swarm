@@ -10,9 +10,14 @@
 #   concurrencyLimit   maximum concurrently-running agents (1..64, default 3)
 #   providers          ordered subagent provider names to spawn through;
 #                      defaults to `spawn` → `fork` → first registered
+#   model              default model for spawned subagents (null = provider default)
+#   reasoningEffort    default reasoning effort for spawned subagents
+#                      (null = deployment default; "off"/"low"/"high"/"max")
 - insert:
     - id: agent-swarm
       name: dsh-agent-swarm
       config:
         concurrencyLimit: 3
         providers: []
+        model: null
+        reasoningEffort: null

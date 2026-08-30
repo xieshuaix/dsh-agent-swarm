@@ -7,15 +7,19 @@ visual check of the UI wired to the real host half.
 
 | Layer | Where | What it proves | Run |
 |-------|-------|----------------|-----|
-| Unit (store) | `test/store.test.mjs` | The durable projection store round-trips, sanitizes, and clamps hostile input. | `node --test` |
-| Host e2e | `test/host-e2e.test.mjs` | The full orchestration lifecycle (recruit → plan → confirm → spawn → summarize), the `/swarm` command, the model context, and the HTTP data plane — against a faithful fake Cordis ctx. | `node --test` |
-| Client functional | `test/client.test.mjs` | The browser bundle (`lib/client.js`) registers the primitive `conversation.view` "Swarm" tab and the `conversation.chat.node` inline-card seat (keyed `swarm-card`), and renders without a browser (vm sandbox + stub React). | `node --test` |
+| Unit (store) | `test/store.test.mjs` | The durable projection store round-trips, sanitizes, and clamps hostile input. | `node --test test/store.test.mjs` |
+| Host e2e | `test/host-e2e.test.mjs` | The full orchestration lifecycle (recruit → plan → confirm → spawn → summarize), the `/swarm` command, the model context, and the HTTP data plane — against a faithful fake Cordis ctx. | `node --test test/host-e2e.test.mjs` |
+| Client functional | `test/client.test.mjs` | The browser bundle (`lib/client.js`) registers the primitive `conversation.view` "Swarm" tab and the `conversation.chat.node` inline-card seat (keyed `swarm-card`), and renders without a browser (vm sandbox + stub React). | `node --test test/client.test.mjs` |
+| Apply smoke | `test/apply.smoke.test.mjs` | `apply(ctx)` loads with the correct `inject`/`name` and registers every injection (tools, systemPrompt, commands, webServer). | `node --test test/apply.smoke.test.mjs` |
 | Swarm-tab render | `dsh-agent-swarm-ui/src/components/__tests__/swarmTab.test.tsx` | Renders the client bundle with real React + jsdom: the `conversation.view` tab renders the primitive thin view (basic data), and the `swarm-card` conversation node mounts the ideal card inline at the dispatch turn. | `pnpm test:run` (in the UI) |
 | Embed interactions | `dsh-agent-swarm-ui/src/components/__tests__/embed.test.tsx` | The native embed is a live mini-App: agent click → detail popup, canvas opens, and the tasks/percent toggle applies — against a mocked `/swarm/state`. | `pnpm test:run` (in the UI) |
 | Inline-card browser check | `scripts/verify-inline-chat.mjs` | **Real GUI**: opens a completed swarm session at `127.0.0.1:3080` and asserts the ideal card mounts inline at the dispatch message while the Swarm tab stays primitive. | `node scripts/verify-inline-chat.mjs` |
 | Interaction browser check | `scripts/verify-interactions.mjs` | **Real GUI**: drives the inline card — agent click opens the popup, canvas opens the board, percent toggle applies. | `node scripts/verify-interactions.mjs` |
 | UI bridge integration | `dsh-agent-swarm-ui/src/api/__tests__/live.test.ts` | `LiveDshBridge` polls `/swarm/state`, synthesizes a `SimFrame`, maps plan/todos/logs, and POSTs confirm/cancel — against the plugin's exact wire shape. | `pnpm test:run` (in the UI) |
 | FE visual e2e | `dsh-agent-swarm-ui/e2e/run-e2e.mjs` | **End to end**: mounts the REAL `lib/index.js` `apply` on a real `node:http` server, serves the built UI, and drives it in system Chrome via Playwright — asserting the swarm panel renders and transitions awaiting_confirm → executing → complete. | `pnpm test:e2e` (in the UI) |
+
+`node --test` (no args) runs all four plugin test files together; the per-file
+commands above run just one layer.
 
 ## The host-e2e fake ctx
 

@@ -15,6 +15,7 @@
     "lib",
     "ui-dist",
     "scripts",
+    "docs",
     "cordis.patch.yml",
     "README.md"
   ],

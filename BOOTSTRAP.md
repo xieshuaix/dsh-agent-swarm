@@ -40,13 +40,19 @@ work. Read the **concepts** first, then the **docs** when you need specifics.
    `client-request` envelope. `workspace.create({path})` adopts an existing dir;
    `session.create({workspaceId})` → grouped session; `session.prompt`
    materializes the agent; **fresh session per experiment round** (never reuse —
-   history biases the main agent). See `docs/DEBUGGING.md` §2.
+   history biases the main agent). (This is DSH's generic `/api/<method>` RPC —
+   see `docs/DSH_FRAMEWORK.md` §7 for the client `sessions`/`workspaces`
+   services.)
 
 7. **Self-heal + close-out.** `closeOut()` marks owned plan items done and flips
    `executing → complete` when all agents are terminal; it runs on read (in
    `state()`) and on settlement, so stale projections self-correct.
 
 ## Docs (the source of truth)
+
+> The `dsh-agent-swarm-ui/…` entries require a **sibling checkout** of
+> `dsh-agent-swarm-ui` (`git clone https://github.com/xieshuaix/dsh-agent-swarm-ui.git`
+> next to this repo).
 
 | When you need | Read |
 |---------------|------|

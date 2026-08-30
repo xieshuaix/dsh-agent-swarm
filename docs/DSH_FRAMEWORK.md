@@ -30,7 +30,7 @@ Three coordinated pieces, wired by `package.json`:
 ```jsonc
 {
   "main": "lib/index.js",
-  "exports": { ".": "./lib/index.js", "./client": "./lib/client.js", "./package.json": "./package.json" },
+  "exports": { ".": "./lib/index.js", "./client": "./lib/client.js", "./store": "./lib/store.js", "./package.json": "./package.json" },
   "files": ["lib", "ui-dist", "scripts", "cordis.patch.yml", "README.md"],
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },
@@ -220,7 +220,7 @@ shows only the latest call, while the primitive tab shows every batch (session-l
 | Route | Method | Purpose |
 | --- | --- | --- |
 | `/swarm/state?session=<id>&view=latest` | GET | the projection (loopback) |
-| `/swarm/state` | POST `{ session, action }` | `confirm` / `cancel` / `topology` |
+| `/swarm/state` | POST `{ session, action }` | mutations — the UI uses `confirm` / `cancel` / `topology`; the handler also accepts `recruit` / `plan` / `summarize` / `spawn` / `delegate-plan` |
 | `/swarm/events?session=<id>` | GET (SSE) | `swarm/*` event stream |
 | `/dsh-agent-swarm/ui/*` | GET | the built embed (`ui-dist/`) |
 
