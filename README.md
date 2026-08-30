@@ -26,12 +26,16 @@ it takes.
 ## At a glance
 
 <p align="center">
-  <img src="docs/screenshots/massive-swarm.jpg" alt="A 20-agent swarm" width="48%">
-  <img src="docs/screenshots/agent-panel-artifacts.jpg" alt="Agent panel with artifacts" width="48%">
+  <img src="docs/screenshots/massive-swarm.jpg" alt="A 20-agent swarm" width="720">
 </p>
 
-Left: a **20-agent swarm** running under a concurrency limit. Right: a single
-agent's **workspace panel** showing the artifacts it produced.
+*A 20-agent swarm running under a concurrency limit.*
+
+<p align="center">
+  <img src="docs/screenshots/agent-panel-artifacts.jpg" alt="Agent panel with artifacts" width="720">
+</p>
+
+*A single agent's workspace panel showing the artifacts it produced.*
 
 ## Features
 
