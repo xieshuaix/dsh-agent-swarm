@@ -245,8 +245,9 @@ Building on or modifying this code? Start here:
 - **[BOOTSTRAP.md](BOOTSTRAP.md)** · **[TESTING.md](TESTING.md)** — bootstrap
   orientation and the test/known-bugs log.
 
-The UI's **source** lives in a separate repo, `dsh-agent-swarm-ui`; this repo
-only ships its **built bundle** in `ui-dist/`. See that repo's
+The UI's **source** lives in a separate repo,
+**[`dsh-agent-swarm-ui`](https://github.com/xieshuaix/dsh-agent-swarm-ui)**; this
+repo only ships its **built bundle** in `ui-dist/`. See that repo's
 **[ARCHITECTURE.md](https://github.com/xieshuaix/dsh-agent-swarm-ui/blob/main/ARCHITECTURE.md)**
 and **[BUILD.md](https://github.com/xieshuaix/dsh-agent-swarm-ui/blob/main/BUILD.md)**
 for the component map and the reproducible build/sync steps.
