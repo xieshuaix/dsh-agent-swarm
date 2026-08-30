@@ -17,7 +17,7 @@
 // before the run (wiped + recreated fresh).
 
 import { existsSync, mkdirSync, rmSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -65,7 +65,15 @@ export async function runSessionTest(prompt, round, testName = "experiment") {
   mkdirSync(wsPath, { recursive: true });
 
   const createdWs = await unary("workspace.create", { path: wsPath });
-  const workspace = createdWs.value.workspace;
+  let workspace = createdWs.value.workspace;
+  // workspace.create titles the workspace by its basename only ("toy-019");
+  // retitle it to reflect the folder structure relative to the tests root's
+  // parent ("dsh-agent-swarm-tests/toy-019") so the sidebar matches the layout.
+  const displayTitle = `${basename(TESTS_ROOT)}/${testDirName}`;
+  if (workspace.title !== displayTitle) {
+    const renamed = await unary("workspace.rename", { workspaceId: workspace.workspaceId, title: displayTitle });
+    workspace = renamed.value.workspace;
+  }
   const created = await unary("session.create", { workspaceId: workspace.workspaceId });
   const sessionId = created.value.sessionId;
   await unary("session.rename", { sessionId, title });
