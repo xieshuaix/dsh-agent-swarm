@@ -29,29 +29,35 @@ loopback HTTP data plane. The plugin never runs its own LLM loop.
 - **`/swarm`** slash command — `list | recruit | plan | confirm | cancel | summarize`.
 - **system-prompt context** — the active session's swarm phase, objective,
   roster, and plan are injected into the model's context.
-- **`GET/POST /swarm/state`** — loopback-only HTTP data plane the web tab polls.
-- **"Swarm" tab** — a `conversation.view` tab rendering phase, roster cards,
-  plan list, and summary, with confirm/cancel actions.
-- **"Ideal UI" tab** — a second `conversation.view` tab that embeds the full
-  ideal swarm UI (`dsh-agent-swarm-ui`, the Figma app) in an iframe served from
-  this plugin at `/dsh-agent-swarm/ui/`. The ideal UI fetches `/swarm/state` on
-  the native DSH origin, so no separate host and no core patch is needed.
+- **`GET/POST /swarm/state`** — loopback-only HTTP data plane the web UI polls.
+- **"Swarm" tab** — a `conversation.view` tab that mounts the **ideal
+  SwarmPanel** (`dsh-agent-swarm-ui`'s rich agent cards) natively — no thin
+  inline cards, no iframe. It loads the embed library
+  (`/dsh-agent-swarm/ui/ideal-swarm-ui.js`) and calls
+  `window.IdealSwarmUI.mount(container, { sessionId })`.
+- **Inline in the chat** — the same ideal SwarmPanel also mounts **at the
+  message where the swarm was dispatched**, via a `conversation.chat.turnTail`
+  chain seat. Placement is detected synchronously from the conversation
+  snapshot (the first assistant turn that called the `swarm` tool with
+  `recruit`/`plan`/`confirm`); the panel then live-polls `/swarm/state`.
 
 ### Refreshing the embedded ideal UI
 
-The embedded bundle is a build of `dsh-agent-swarm-ui` copied to `ui-dist/`:
+`ui-dist/` holds the ideal UI's **embed library** — an IIFE build
+(`ideal-swarm-ui.js` + `ideal-swarm-ui.css`) that exposes
+`window.IdealSwarmUI.mount(container, { sessionId })`. Rebuild it whenever
+`dsh-agent-swarm-ui` changes:
 
 ```sh
-cd dsh-agent-swarm-ui && FIGMA_PUBLIC_URL=/dsh-agent-swarm/ui pnpm run build
-rm -rf ../dsh-agent-swarm/ui-dist && mkdir -p ../dsh-agent-swarm/ui-dist
-cp -R dist/. ../dsh-agent-swarm/ui-dist/
+cd dsh-agent-swarm-ui
+pnpm exec vite build --config vite.lib.config.ts
+cp dist-embed/ideal-swarm-ui.js dist-embed/ideal-swarm-ui.css ../dsh-agent-swarm/ui-dist/
 ```
 
-`FIGMA_PUBLIC_URL=/dsh-agent-swarm/ui` sets the Vite `base` so the built
-`index.html` references `/dsh-agent-swarm/ui/assets/…` (matching the prefix
-route); without it the assets 404 and the tab renders blank.
-
-Re-run this whenever the ideal UI changes, then reinstall/restart the host.
+Then **refresh the browser** — the client half is served from the plugin's
+`lib/client.js` and re-read per request, so no host restart is needed for
+client-half or embed-library changes (a host restart is only required for
+host-half `lib/index.js` changes).
 
 ## Install
 
@@ -114,9 +120,10 @@ upgrade replaces it).
 
 ```
 lib/index.js       host half: ctx.swarm service + command + context + HTTP
-lib/client.js      client half: the "Swarm" conversation.view tab
+lib/client.js      client half: native ideal-UI "Swarm" tab + inline turnTail
 lib/store.js       durable per-session swarm projection store (unit-tested)
 scripts/patch-core.mjs  one-time core patch: subagent reasoning-effort routing
+scripts/verify-inline-chat.mjs  browser check: inline cards + Swarm tab
 cordis.patch.yml   bundle patch layer
 package.json       bundle + client manifests
 ```

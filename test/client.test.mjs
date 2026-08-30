@@ -94,7 +94,7 @@ test("client bundle exports the host-facing contract", () => {
   assert.equal(typeof module.apply, "function");
 });
 
-test("apply registers locale dictionaries and the conversation.view slot", () => {
+test("apply registers locale dictionaries and the conversation slots", () => {
   const { module } = loadBundle();
   const fake = makeFakeCtx();
 
@@ -103,22 +103,94 @@ test("apply registers locale dictionaries and the conversation.view slot", () =>
   assert.equal(fake.registered.locales.length, 1);
   assert.equal(fake.registered.locales[0].ns, "dsh-agent-swarm");
 
-  assert.equal(fake.registered.slots.length, 1);
-  const swarm = fake.registered.slots[0];
-  assert.equal(swarm.meta.name, "conversation.view");
+  assert.equal(fake.registered.slots.length, 2);
+  const swarm = fake.registered.slots.find((s) => s.meta.name === "conversation.view");
+  assert.ok(swarm, "conversation.view slot registered");
   assert.equal(swarm.meta.id, "swarm");
   assert.equal(typeof swarm.meta.label, "function");
   assert.equal(swarm.meta.label(), "tab"); // t() is the identity stub
+
+  const tail = fake.registered.slots.find((s) => s.meta.name === "conversation.chat.turnTail");
+  assert.ok(tail, "conversation.chat.turnTail chain slot registered");
+  assert.equal(typeof tail.meta.select, "function");
 });
 
 test("the slot render function produces a native SwarmView element for a session", () => {
   const { module } = loadBundle();
   const fake = makeFakeCtx();
   module.apply(fake.ctx);
-  const { render } = fake.registered.slots[0];
+  const { render } = fake.registered.slots.find((s) => s.meta.name === "conversation.view");
 
   const element = render({ sessionId: "s1" });
   assert.ok(element, "render returns an element");
   assert.equal(typeof element.type, "function", "renders the native SwarmView component");
   assert.equal(element.props.sessionId, "s1");
+});
+
+test("the turnTail select narrows on the engine-owned turn boundary", () => {
+  const { module } = loadBundle();
+  const fake = makeFakeCtx();
+  module.apply(fake.ctx);
+  const tail = fake.registered.slots.find((s) => s.meta.name === "conversation.chat.turnTail");
+
+  // select returns objects minted in the vm realm, so assert fields, not
+  // deep-equality (cross-realm prototypes differ).
+  const m1 = tail.meta.select({ turn: { turn: 3 }, seq: 10 });
+  assert.equal(m1.turn, 3);
+  assert.equal(m1.seq, 10);
+  const m2 = tail.meta.select({ turn: 7, seq: 2 });
+  assert.equal(m2.turn, 7);
+  assert.equal(m2.seq, 2);
+  assert.equal(tail.meta.select({ seq: 1 }), null, "no turn boundary declines the chain seat");
+});
+
+test("firstSwarmTurn finds the first dispatching swarm tool call", () => {
+  const { module } = loadBundle();
+  const { firstSwarmTurn } = module.__internals;
+
+  const assistant = (turn, blocks) => ({ kind: "assistant", turn, blocks });
+  const call = (name, action) => ({ kind: "tool-call", name, argsRaw: JSON.stringify({ action }) });
+
+  const snapshot = {
+    nodes: [
+      assistant(1, [call("write", "run")]),
+      assistant(2, [call("swarm", "recruit")]),
+      assistant(3, [call("swarm", "state")]),
+      assistant(4, [call("swarm", "summarize")])
+    ]
+  };
+
+  assert.equal(firstSwarmTurn(snapshot), 2, "first recruit/plan/confirm turn, not a state read");
+  assert.equal(firstSwarmTurn({ nodes: [] }), -1, "empty snapshot has no dispatch turn");
+  assert.equal(firstSwarmTurn({}), -1, "missing nodes declines safely");
+  assert.equal(firstSwarmTurn(null), -1, "null snapshot declines safely");
+
+  // A `state` read alone is not a dispatch.
+  const readOnly = { nodes: [assistant(1, [call("swarm", "state")])] };
+  assert.equal(firstSwarmTurn(readOnly), -1);
+});
+
+test("InlineSwarmTail mounts only at the dispatch turn", () => {
+  const { module } = loadBundle();
+  const fake = makeFakeCtx();
+  module.apply(fake.ctx);
+  const tail = fake.registered.slots.find((s) => s.meta.name === "conversation.chat.turnTail");
+  const { render } = tail;
+  const t = (key) => key;
+  // The stub React records elements without running components, so drive the
+  // component body directly through the recorded element.
+  const run = (props) => {
+    const el = render(props);
+    return el.type(el.props);
+  };
+
+  const dispatch = run({ sessionId: "s1", useSession: () => 3, matched: { turn: 3, seq: 9 }, t });
+  assert.ok(dispatch, "renders the inline panel at the dispatch turn");
+  assert.equal(dispatch.type, "div", "wraps in a .das-inline card");
+
+  const declined = run({ sessionId: "s1", useSession: () => 3, matched: { turn: 4, seq: 10 }, t });
+  assert.equal(declined, null, "a later turn does not re-mount the panel");
+
+  const none = run({ sessionId: "s1", useSession: () => -1, matched: { turn: 1, seq: 5 }, t });
+  assert.equal(none, null, "a session with no swarm renders nothing");
 });

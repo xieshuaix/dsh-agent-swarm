@@ -1,7 +1,7 @@
 {
   "name": "dsh-agent-swarm",
   "version": "0.1.0",
-  "description": "DeepSeek Harness plugin: per-session multi-agent orchestration. The main agent recruits subagents, plans the orchestration (itself or by delegating planning to a subagent), executes, and summarizes. Host half provides ctx.swarm (a first-class service over ctx.subagents), a /swarm slash command, model-facing swarm context, and a loopback HTTP data plane; the client half adds a Swarm tab to the conversation view ring.",
+  "description": "DeepSeek Harness plugin: per-session multi-agent orchestration. The main agent recruits subagents, plans the orchestration (itself or by delegating planning to a subagent), executes, and summarizes. Host half provides ctx.swarm (a first-class service over ctx.subagents), a /swarm slash command, model-facing swarm context, and a loopback HTTP data plane; the client half mounts the ideal SwarmPanel natively in a Swarm tab and inline in the chat at the message where the swarm was dispatched.",
   "license": "MIT",
   "type": "module",
   "main": "lib/index.js",
