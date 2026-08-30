@@ -12,6 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const HOST = process.env.DSH_TARGET ?? "http://127.0.0.1:3080";
 const SESSION_TITLE = process.argv[2] ?? "swarm experiment 009";
 const SESSION_ID = process.argv[3] ?? "session-47c63d2d-4d95-4ba4-9291-c361df7bac9b";
+const AGENT_NAME = process.argv[4] ?? "HTML Writer";
 
 function loadPlaywright() {
   const uiPkg = join(__dirname, "..", "..", "dsh-agent-swarm-ui", "package.json");
@@ -61,7 +62,7 @@ async function main() {
     check("inline swarm card present (chat node)", true);
 
     // 1. Agent click → detail popup.
-    await page.getByText("HTML Writer", { exact: true }).first().click({ timeout: 5000 });
+    await page.getByText(AGENT_NAME, { exact: true }).first().click({ timeout: 5000 });
     await page.waitForTimeout(1000);
     const popupOpen = await page.getByText("Open Workspace").first().isVisible().catch(() => false);
     check("agent click opens the detail popup", popupOpen);
