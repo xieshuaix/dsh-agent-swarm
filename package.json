@@ -13,6 +13,7 @@
   },
   "files": [
     "lib",
+    "ui-dist",
     "scripts",
     "cordis.patch.yml",
     "README.md"
