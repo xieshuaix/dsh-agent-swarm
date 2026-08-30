@@ -54,11 +54,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  */
 export async function runSessionTest(prompt, round, testName = "experiment") {
   const n = String(Number.parseInt(round, 10) || 5).padStart(3, "0");
-  // Session title carries the test name + round so different tests/rounds are
-  // distinguishable in the sidebar (e.g. "scale 001", "toy 006").
-  const title = `${testName} ${n}`;
-  const testDirName = `${testName}-${n}`;
-  const wsPath = join(TESTS_ROOT, testDirName);
+  // One workspace per TEST TYPE (group), one session per ROUND under it:
+  //   group "dsh-agent-swarm-tests/scale" → session "swarm experiment 002"
+  //   group "dsh-agent-swarm-tests/toy"   → session "swarm experiment 006"
+  const title = `swarm experiment ${n}`;
+  const wsPath = join(TESTS_ROOT, testName);
 
   // Guarantee the test directory does not already exist — every run starts from
   // an empty filesystem (no AGENTS.md, no app files) so artifacts can't leak
@@ -68,10 +68,9 @@ export async function runSessionTest(prompt, round, testName = "experiment") {
 
   const createdWs = await unary("workspace.create", { path: wsPath });
   let workspace = createdWs.value.workspace;
-  // workspace.create titles the workspace by its basename only ("toy-019");
-  // retitle it to reflect the folder structure relative to the tests root's
-  // parent ("dsh-agent-swarm-tests/toy-019") so the sidebar matches the layout.
-  const displayTitle = `${basename(TESTS_ROOT)}/${testDirName}`;
+  // workspace.create titles the workspace by its basename only ("scale");
+  // retitle it to the folder structure ("dsh-agent-swarm-tests/scale").
+  const displayTitle = `${basename(TESTS_ROOT)}/${testName}`;
   if (workspace.title !== displayTitle) {
     const renamed = await unary("workspace.rename", { workspaceId: workspace.workspaceId, title: displayTitle });
     workspace = renamed.value.workspace;
