@@ -152,8 +152,50 @@ cordis.patch.yml   bundle patch layer
 package.json       bundle + client manifests
 ```
 
-## Tests
+## Tests & demo runs
+
+### Unit / integration
 
 ```sh
-node --test test/*.test.mjs
+node --test test/*.test.mjs    # host half + client half + store — no host needed
 ```
+
+### End-to-end session runs (main-agent-driven)
+
+Each runner creates a fresh, isolated workspace under `dsh-agent-swarm-tests/<test>/`
+(session named `swarm experiment <round>`), prompts the main agent with a natural
+task, then observes `/swarm/state` until the swarm completes and a summary is
+recorded. Requires a running host with the plugin installed.
+
+| Script | What it does | Agents | Duration |
+|---|---|---|---|
+| `node scripts/run-swarm-session-test-toy.mjs [round]` | **Toy** — minimal click-counter web app (index.html / style.css / app.js / README.md). The smallest working end-to-end test. | 4 | ~1–2 min |
+| `node scripts/run-swarm-session-test-search-fe.mjs [round]` | **Search (multi-modal)** — build a multi-modal search API (frontend + embedding backend + API schema + smoke tests). Longer than toy. | 4 | ~2–5 min |
+| `node scripts/run-swarm-session-test-scale.mjs [round]` | **Scale** — 20 theme designers at concurrency 5, each writing one CSS theme + a doc. Exercises large multi-agent orchestration. | 20 (concurrency 5) | ~2–4 min |
+
+Every runner finishes with a per-agent table and an at-a-glance check:
+
+```
+agents with own plan: N/N; agents with >=1 artifact: N/N
+```
+
+`[round]` is any number; pass a fresh one per run (it names the session and
+workspace).
+
+### Verify scripts
+
+| Script | What it checks |
+|---|---|
+| `node scripts/verify-data-completeness.mjs <sessionId>` | Reads the JSONL event log + `/swarm/state`; asserts phase evolution and per-agent plan/todo/artifact/log completeness. No UI. |
+| `node scripts/verify-real.mjs [sessionId]` | Mounts the real host half against a real completed session's evidence (no running host) and checks the full projection. |
+| `node scripts/verify-inline-chat.mjs [title] [id]` | Browser check: the ideal card mounts inline in chat and the Swarm tab stays primitive. |
+| `node scripts/verify-interactions.mjs [title] [id] [agentName]` | Browser check: agent click → popup, canvas, progress toggle, canvas → workspace. |
+
+### Legacy / utilities
+
+- `node scripts/run-experiment.mjs [round]` — older HTTP-driven experiment (drives
+  the swarm via `POST /swarm/state` directly, not via the main agent).
+- `node scripts/patch-core.mjs --checkout <path>` — one-time core patch for
+  subagent `reasoningEffort` routing (see "Model routing" above).
+- `node scripts/migrate-test-workspaces.mjs` — migrate old test workspaces into
+  `dsh-agent-swarm-tests/<test>/`.
