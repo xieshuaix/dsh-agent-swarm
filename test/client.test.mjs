@@ -21,6 +21,9 @@ const ReactStub = {
     return [initial, () => undefined];
   },
   useEffect() {},
+  useRef(initial) {
+    return { current: initial };
+  },
   useCallback(fn) {
     return fn;
   },
@@ -100,30 +103,15 @@ test("apply registers locale dictionaries and the conversation.view slot", () =>
   assert.equal(fake.registered.locales.length, 1);
   assert.equal(fake.registered.locales[0].ns, "dsh-agent-swarm");
 
-  assert.equal(fake.registered.slots.length, 2);
+  assert.equal(fake.registered.slots.length, 1);
   const swarm = fake.registered.slots[0];
   assert.equal(swarm.meta.name, "conversation.view");
   assert.equal(swarm.meta.id, "swarm");
   assert.equal(typeof swarm.meta.label, "function");
   assert.equal(swarm.meta.label(), "tab"); // t() is the identity stub
-
-  const ideal = fake.registered.slots[1];
-  assert.equal(ideal.meta.id, "ideal");
-  assert.equal(ideal.meta.label(), "tabIdeal");
 });
 
-test("the ideal-UI slot renders an iframe pointing at the plugin-served bundle", () => {
-  const { module } = loadBundle();
-  const fake = makeFakeCtx();
-  module.apply(fake.ctx);
-  const { render } = fake.registered.slots[1];
-
-  const element = render({ sessionId: "s1" });
-  assert.equal(element.type, "iframe");
-  assert.equal(element.props.src, "/dsh-agent-swarm/ui/?session=s1");
-});
-
-test("the slot render function produces a SwarmView element for a session", () => {
+test("the slot render function produces a native SwarmView element for a session", () => {
   const { module } = loadBundle();
   const fake = makeFakeCtx();
   module.apply(fake.ctx);
@@ -131,6 +119,6 @@ test("the slot render function produces a SwarmView element for a session", () =
 
   const element = render({ sessionId: "s1" });
   assert.ok(element, "render returns an element");
-  assert.equal(typeof element.type, "function", "renders the SwarmView component");
+  assert.equal(typeof element.type, "function", "renders the native SwarmView component");
   assert.equal(element.props.sessionId, "s1");
 });
