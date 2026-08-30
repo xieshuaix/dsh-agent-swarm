@@ -35,6 +35,8 @@ IMPORTANT: each subagent must WRITE its file(s) from scratch (overwrite any exis
 The 20 themes (one subagent each):
 ${THEME_LINES}
 
+Recruit them all in ONE swarm call, e.g. swarm(action="recruit", concurrency=5, agents=[{name:"Ocean designer", role:"theme designer", model:"deepseek-v4-flash", reasoningEffort:"off", outlinePlan:true, rolePrompt:"You are the ocean palette designer.", task:"Write themes/01-ocean.css — a 5-color palette (background, surface, text, primary, accent) plus demo .card and button styles for the Ocean theme."}, ...one entry per theme...]).
+
 After recruiting, set the plan, confirm execution, and when they finish, record a one-paragraph summary with the swarm tool.`;
 
 runSessionTest(PROMPT, process.argv[2] ?? "001", "scale").catch((error) => {
