@@ -7,8 +7,14 @@
 // run-swarm-session-test-toy.mjs) differ ONLY in the task prompt + default
 // round; everything else is this shared runner.
 
+import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+
 const HOST = process.env.DSH_HOME_URL ?? "http://127.0.0.1:3080";
-const WORKSPACE = process.env.WORKSPACE ?? "Swarm Experiments";
+// Dedicated, disposable test workspace — separate from the real "Swarm
+// Experiments" workspace so toy runs never touch real work, and wiped fresh on
+// every round so artifacts from a previous test can't leak into the next.
+const WORKSPACE = process.env.WORKSPACE ?? "Swarm Tests";
 
 async function unary(method, payload = {}, rpc = "r") {
   const res = await fetch(`${HOST}/api/${method}`, {
@@ -38,16 +44,17 @@ export async function runSessionTest(prompt, round) {
   const n = String(Number.parseInt(round, 10) || 5).padStart(3, "0");
   const title = `swarm experiment ${n}`;
 
-  const { value: ws } = await unary("workspace.list");
-  let workspace = ws.items.find((w) => w.title === WORKSPACE);
-  if (!workspace) {
-    const created = await unary("workspace.create", { path: `${process.env.HOME}/Documents/DeepSeek/${WORKSPACE.toLowerCase().replace(/\s+/g, "-")}` });
-    workspace = created.value.workspace;
-  }
+  // Wipe + recreate the dedicated workspace directory so this round starts from
+  // an empty filesystem (no AGENTS.md, no app files) — isolation between tests.
+  const wsPath = join(process.env.HOME, "Documents", "DeepSeek", WORKSPACE.toLowerCase().replace(/\s+/g, "-"));
+  if (existsSync(wsPath)) rmSync(wsPath, { recursive: true, force: true });
+  mkdirSync(wsPath, { recursive: true });
+  const createdWs = await unary("workspace.create", { path: wsPath });
+  const workspace = createdWs.value.workspace;
   const created = await unary("session.create", { workspaceId: workspace.workspaceId });
   const sessionId = created.value.sessionId;
   await unary("session.rename", { sessionId, title });
-  console.log(`session: ${title} (${sessionId})`);
+  console.log(`session: ${title} (${sessionId}) in workspace "${workspace.title}" (${wsPath})`);
 
   const promptResult = await unary("session.prompt", {
     sessionId,

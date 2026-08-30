@@ -7,7 +7,7 @@
 
 import { runSessionTest } from "./_run-session-test.mjs";
 
-const PROMPT = `Build a tiny "click counter" web app in this workspace. Keep it minimal — it should take about a minute.
+const PROMPT = `Build a tiny "click counter" web app in this dedicated test workspace (it starts empty and is isolated from other tests — do not reuse or read files from any other workspace). Keep it minimal — it should take about a minute.
 
 First write an AGENTS.md file in this workspace that defines each team role in one line (HTML builder, CSS builder, JS builder, docs writer) — this is the shared role definition the swarm UI surfaces.
 

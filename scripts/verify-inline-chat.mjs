@@ -13,6 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const HOST = process.env.DSH_TARGET ?? "http://127.0.0.1:3080";
 const SESSION_TITLE = process.argv[2] ?? "swarm experiment 008";
 const SESSION_ID = process.argv[3] ?? "session-bb642cd4-a6db-4e68-bfbd-a20f7ad56cf7";
+const WORKSPACE_HEADING = process.env.DSH_WORKSPACE ?? "Swarm Experiments";
 
 function loadPlaywright() {
   const uiPkg = join(__dirname, "..", "..", "dsh-agent-swarm-ui", "package.json");
@@ -59,7 +60,7 @@ async function main() {
     }
     await unfold();
     if (!(await title.isVisible().catch(() => false))) {
-      await page.getByText("Swarm Experiments", { exact: true }).first().click().catch(() => {});
+      await page.getByText(WORKSPACE_HEADING, { exact: true }).first().click().catch(() => {});
       await page.waitForTimeout(400);
       await unfold();
     }

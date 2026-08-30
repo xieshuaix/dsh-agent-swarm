@@ -13,6 +13,7 @@ const HOST = process.env.DSH_TARGET ?? "http://127.0.0.1:3080";
 const SESSION_TITLE = process.argv[2] ?? "swarm experiment 009";
 const SESSION_ID = process.argv[3] ?? "session-47c63d2d-4d95-4ba4-9291-c361df7bac9b";
 const AGENT_NAME = process.argv[4] ?? "HTML Writer";
+const WORKSPACE_HEADING = process.env.DSH_WORKSPACE ?? "Swarm Experiments";
 
 function loadPlaywright() {
   const uiPkg = join(__dirname, "..", "..", "dsh-agent-swarm-ui", "package.json");
@@ -50,7 +51,7 @@ async function main() {
     await unfold();
     const title = page.getByText(SESSION_TITLE, { exact: true }).first();
     if (!(await title.isVisible().catch(() => false))) {
-      await page.getByText("Swarm Experiments", { exact: true }).first().click().catch(() => {});
+      await page.getByText(WORKSPACE_HEADING, { exact: true }).first().click().catch(() => {});
       await page.waitForTimeout(400);
       await unfold();
     }
@@ -89,10 +90,11 @@ async function main() {
     check("percent mode applies to agent cards", body.includes("Task progress"));
 
     // 4. Canvas → agent node → "Open Workspace" → the agent workspace panel
-    //    (and the canvas must close so the panel isn't hidden behind it).
-    //    The node card is keyed by the agent id, which the swarm tool derives
-    //    from the name (lowercase + non-word → "-"). Clicking by name would hit
-    //    the chat's objective text (still in the DOM behind the canvas overlay).
+    //    opens ON TOP of the canvas (workspace zIndex 400 > canvas zIndex 300),
+    //    without dismissing the canvas. The node card is keyed by the agent id,
+    //    which the swarm tool derives from the name (lowercase + non-word → "-").
+    //    Clicking by name would hit the chat's objective text (still in the DOM
+    //    behind the canvas overlay).
     await canvasBtn.click({ timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(1200);
     const slug = AGENT_NAME.toLowerCase().replace(/\W+/g, "-");
@@ -107,8 +109,8 @@ async function main() {
     await page.waitForTimeout(1400);
     const wsOpen = (await page.getByText("Artifacts", { exact: true }).count().catch(() => 0)) >= 1;
     check("open workspace (from canvas) opens the agent panel", wsOpen);
-    const canvasClosed = (await page.getByTestId("link-count").count().catch(() => 0)) === 0;
-    check("canvas closes when the agent panel opens", canvasClosed);
+    const canvasStillOpen = (await page.getByTestId("link-count").count().catch(() => 0)) >= 1;
+    check("canvas stays open under the agent panel", canvasStillOpen);
 
     const relevantErrors = errors.filter((e) => !/favicon|net::ERR|Failed to load resource/i.test(e));
     check("no page errors during load", relevantErrors.length === 0, relevantErrors.slice(0, 2).join(" | "));
