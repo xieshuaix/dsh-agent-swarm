@@ -111,5 +111,9 @@ export async function runSessionTest(prompt, round, testName = "experiment") {
       ` model=${a.model ?? "?"} effort=${a.reasoningEffort ?? "?"}`
     );
   }
-  console.log(`\nsession: ${sessionId}`);
+  // At-a-glance check: how many agents produced their own plan and ≥1 artifact.
+  const withPlan = snapshot.agents.filter((a) => (a.plan?.length ?? 0) > 0).length;
+  const withArtifact = snapshot.agents.filter((a) => (a.artifacts?.length ?? 0) > 0).length;
+  console.log(`\nagents with own plan: ${withPlan}/${snapshot.agents.length}; agents with >=1 artifact: ${withArtifact}/${snapshot.agents.length}`);
+  console.log(`session: ${sessionId}`);
 }

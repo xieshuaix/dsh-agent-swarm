@@ -25,7 +25,12 @@ Workspace: "{WORKSPACE_DIR}" (it starts empty and is isolated from other tests).
 
 First write an AGENTS.md file defining the shared role in one line (each subagent is a "theme designer" that writes one CSS color-theme file into the themes/ directory).
 
-Then use the swarm tool to recruit 20 subagents with concurrency 5, each with model deepseek-v4-flash and reasoningEffort off. Give each subagent a rolePrompt that states its role (e.g. "You are the ocean palette designer."), and have each write a quick 2-3 step plan first, then do its part. IMPORTANT: each subagent must WRITE its file from scratch (overwrite any existing file with that name) — never skip writing because a file already exists, so every role produces a fresh artifact. Each file is a 5-color CSS palette (background, surface, text, primary, accent) plus demo .card and button styles for its theme.
+Then use the swarm tool to recruit 20 subagents with concurrency 5, each with model deepseek-v4-flash and reasoningEffort off. For EVERY one of the 20 subagents you MUST:
+- give it a rolePrompt that states its role (e.g. "You are the ocean palette designer.");
+- set outlinePlan: true so it writes its OWN 2-3 step plan before working;
+- give it a task whose deliverable is AT LEAST ONE artifact — a code file (its theme CSS) and/or a doc file (a short .md describing the palette).
+
+IMPORTANT: each subagent must WRITE its file(s) from scratch (overwrite any existing file) — never skip writing because a file already exists — so every subagent ends up with its own plan AND at least one artifact. Each code file is a 5-color CSS palette (background, surface, text, primary, accent) plus demo .card and button styles for its theme.
 
 The 20 themes (one subagent each):
 ${THEME_LINES}
