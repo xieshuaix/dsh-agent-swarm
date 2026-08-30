@@ -86,6 +86,16 @@ limit** (default 3, configurable 1–64) caps how many subagents run at once.
 
 ![Massive 20-agent swarm](docs/screenshots/massive-swarm.jpg)
 
+### Primitive Swarm tab — a developer tool
+
+The **Swarm** tab is a thin, primitive data view of the same `/swarm/state`
+projection the ideal UI renders: every subagent's identity, role, plan, todos,
+artifacts, and logs in one place. It's deliberately minimal — use it to verify
+the raw data that feeds the ideal UI (anything missing here is missing there
+too), which makes it a handy debugging companion when developing the swarm UI.
+
+![Swarm tab](docs/screenshots/swarm-tab.jpg)
+
 ## What it does
 
 | Stage | Mechanism |
