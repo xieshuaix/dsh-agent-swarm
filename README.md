@@ -151,6 +151,7 @@ scripts/verify-inline-chat.mjs  browser check: inline cards + Swarm tab
 cordis.patch.yml   bundle patch layer
 package.json       bundle + client manifests
 docs/DSH_FRAMEWORK.md  how DSH works (host/client/BE↔FE wiring) for developing this plugin
+docs/DEBUGGING.md      tools, guidance, and where-to-look for each bug class
 ```
 
 ## Tests & demo runs
