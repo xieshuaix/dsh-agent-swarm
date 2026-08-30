@@ -891,6 +891,38 @@ test("state() derives presentation metadata and topology for the ideal UI", asyn
   }
 });
 
+// Regression: the main agent may write a plan ownerId that is shorter than the
+// recruited agent id (e.g. "css" vs "css-builder"); delegation/report edges must
+// still resolve to the real agent so the orchestrator's reports are drawn.
+test("plan ownerIds resolve to agent ids for delegation/report edges", async () => {
+  const restore = isolateStore();
+  let cwd;
+  try {
+    cwd = mkdtempSync(join(tmpdir(), "dsh-agent-swarm-owner-"));
+    const subagents = createFakeSubagents();
+    const agents = { get: (id) => id ? { id, session: { id, header: { cwd } }, options: {} } : undefined, list: () => [] };
+    const fake = createFakeCtx({ subagents, agents });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+    const session = { id: "s1", header: { cwd } };
+
+    swarm.recruit(session, [
+      { id: "html-builder", name: "HTML builder", role: "html", task: "html" },
+      { id: "css-builder", name: "CSS builder", role: "css", task: "css" }
+    ]);
+    // Main agent wrote a shorter ownerId ("css") that doesn't exactly match.
+    swarm.setPlan(session, [{ title: "style", ownerId: "css" }], { objective: "ship" });
+
+    const projection = swarm.state(session);
+    const lines = projection.lines.map((l) => `${l.from}->${l.to}:${l.type}`);
+    assert.ok(lines.includes("html-builder->css-builder:delegates"), JSON.stringify(lines));
+    assert.ok(lines.includes("css-builder->html-builder:reports"), JSON.stringify(lines));
+  } finally {
+    restore();
+    if (cwd) rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 test("POST /swarm/state supports the topology action", async () => {
   const restore = isolateStore();
   try {
