@@ -91,7 +91,8 @@ async function main() {
       check("ideal SwarmPanel rendered inside the card", inner);
     }
 
-    // The Swarm tab (智能体群组) must still work as before.
+    // The Swarm tab (智能体群组) is the PRIMITIVE thin view — basic data only,
+    // no ideal panel ("Agent Swarm" header / Canvas).
     const tab = page.getByRole("tab", { name: /智能体群组/ }).first();
     const tabVisible = await tab.isVisible().catch(() => false);
     check("Swarm tab still present", tabVisible);
@@ -99,7 +100,7 @@ async function main() {
       await tab.click();
       await page.waitForTimeout(2500);
       const tabText = (await page.locator("body").innerText().catch(() => "")) ?? "";
-      check("Swarm tab renders the ideal panel", /Agent Swarm|Complete/.test(tabText));
+      check("Swarm tab renders the primitive thin view", /Build a minimal|HTML Writer/.test(tabText) && !/Agent Swarm|Canvas/.test(tabText));
     }
 
     await page.screenshot({ path: join(__dirname, "..", "inline-chat.png"), fullPage: true });
