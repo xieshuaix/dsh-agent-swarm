@@ -11,6 +11,20 @@ plugin over the harness's real subagent seam (`ctx.subagents`). No core/harness
 patch is required for basic use; a one-time plugin install + host restart is all
 it takes.
 
+## Version
+
+The latest workable release is tagged **`v0.1.0`** on both repos:
+
+| Repo | Tag |
+|---|---|
+| [`xieshuaix/dsh-agent-swarm`](https://github.com/xieshuaix/dsh-agent-swarm) — the plugin | `v0.1.0` |
+| [`xieshuaix/dsh-agent-swarm-ui`](https://github.com/xieshuaix/dsh-agent-swarm-ui) — the UI source | `v0.1.0` |
+
+The plugin's committed `ui-dist/` is built from the UI repo at `v0.1.0` (see
+`ui-dist/version.json` for the exact UI commit). For a developer, that tag pair is
+the known-working combination: check out both repos at `v0.1.0`, then run
+`pnpm build:plugin` in the UI repo to rebuild/sync the embed into the plugin.
+
 ## Highlights
 
 - **Straightforward swarm visualization** — one panel shows the swarm phase,
