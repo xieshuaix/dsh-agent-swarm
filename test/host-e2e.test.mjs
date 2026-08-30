@@ -787,6 +787,48 @@ test("artifacts are attributed via .dsh-subagent.json markers after spawnMeta is
   }
 });
 
+// Regression: when several children write into ONE shared directory, each child
+// must be attributed only the files it actually wrote (per-file via write
+// events), not the whole directory (the old marker/event-reference heuristic
+// handed the whole dir to one child).
+test("files in a shared directory are attributed per file, not per directory", async () => {
+  const restore = isolateStore();
+  let cwd;
+  try {
+    cwd = mkdtempSync(join(tmpdir(), "dsh-agent-swarm-shared-"));
+    mkdirSync(join(cwd, "themes"));
+    writeFileSync(join(cwd, "themes", "01-ocean.css"), "/* ocean */");
+    writeFileSync(join(cwd, "themes", "02-sunset.css"), "/* sunset */");
+    mkdirSync(join(process.env.DSH_HOME, "agent-swarm"), { recursive: true });
+    writeFileSync(join(process.env.DSH_HOME, "agent-swarm", "s1.json"), JSON.stringify({
+      version: 1, id: "swarm-1", phase: "complete", objective: "", plan: [],
+      agents: [
+        { id: "a1", name: "Ocean", role: "designer", task: "ocean", status: "complete", progress: 100, childId: "child-1" },
+        { id: "a2", name: "Sunset", role: "designer", task: "sunset", status: "complete", progress: 100, childId: "child-2" }
+      ],
+      summary: null, concurrencyLimit: 3, recruitedCount: 2, completedCount: 2
+    }));
+
+    const agents = { get: (id) => id ? { id, session: { id, header: { cwd } }, options: {} } : undefined, list: () => [] };
+    const sessions = {
+      get: (id) => (id ? { id, events: [
+        { type: "tool/call", data: { name: "write", arguments: JSON.stringify({ file_path: join(cwd, id === "child-1" ? "themes/01-ocean.css" : "themes/02-sunset.css") }) } }
+      ] } : undefined),
+      list: () => []
+    };
+    const fake = createFakeCtx({ agents, sessions });
+    apply(fake.ctx, {});
+    const projection = fake.provided.swarm.state({ id: "s1", header: { cwd } });
+
+    const byName = Object.fromEntries(projection.agents.map((a) => [a.name, (a.artifacts ?? []).map((x) => x.name)]));
+    assert.deepEqual(byName.Ocean, ["01-ocean.css"]);
+    assert.deepEqual(byName.Sunset, ["02-sunset.css"]);
+  } finally {
+    restore();
+    if (cwd) rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 test("state() derives presentation metadata and topology for the ideal UI", async () => {
   const restore = isolateStore();
   try {

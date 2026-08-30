@@ -17,13 +17,13 @@ const THEMES = [
   ["17", "lime"], ["18", "peach"], ["19", "indigo"], ["20", "maroon"],
 ];
 
-const THEME_LINES = THEMES.map(([n, slug]) => `${Number(n)}. ${slug} — themes/${n}-${slug}.css`).join("\n");
+const THEME_LINES = THEMES.map(([n, slug]) => `${Number(n)}. ${slug} — ${n}-${slug}.css`).join("\n");
 
 const PROMPT = `Build a "Web Color Themes" reference library from scratch in this dedicated test workspace.
 
 Workspace: "{WORKSPACE_DIR}" (it starts empty and is isolated from other tests). Write every file NEW — do NOT reuse, copy, or adopt any existing code or file as your product, and do NOT read files from any other workspace. Each theme file should be small (~20-30 lines) and take about 1-2 minutes.
 
-First write an AGENTS.md file defining the shared role in one line (each subagent is a "theme designer" that writes one CSS color-theme file into the themes/ directory).
+First write an AGENTS.md file defining the shared role in one line (each subagent is a "theme designer" that writes one CSS color-theme file directly at the workspace root — NOT in a subdirectory, so every file has a distinct path).
 
 Then use the swarm tool to recruit 20 subagents with concurrency 5, each with model deepseek-v4-flash and reasoningEffort off. For EVERY one of the 20 subagents you MUST:
 - give it a rolePrompt that states its role (e.g. "You are the ocean palette designer.");
@@ -35,7 +35,7 @@ IMPORTANT: each subagent must WRITE its file(s) from scratch (overwrite any exis
 The 20 themes (one subagent each):
 ${THEME_LINES}
 
-Recruit them all in ONE swarm call, e.g. swarm(action="recruit", concurrency=5, agents=[{name:"Ocean designer", role:"theme designer", model:"deepseek-v4-flash", reasoningEffort:"off", outlinePlan:true, rolePrompt:"You are the ocean palette designer.", task:"Write themes/01-ocean.css — a 5-color palette (background, surface, text, primary, accent) plus demo .card and button styles for the Ocean theme."}, ...one entry per theme...]).
+Recruit them all in ONE swarm call, e.g. swarm(action="recruit", concurrency=5, agents=[{name:"Ocean designer", role:"theme designer", model:"deepseek-v4-flash", reasoningEffort:"off", outlinePlan:true, rolePrompt:"You are the ocean palette designer.", task:"Write 01-ocean.css at the workspace root — a 5-color palette (background, surface, text, primary, accent) plus demo .card and button styles for the Ocean theme."}, ...one entry per theme...]).
 
 After recruiting, set the plan, confirm execution, and when they finish, record a one-paragraph summary with the swarm tool.`;
 
