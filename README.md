@@ -150,6 +150,7 @@ scripts/patch-core.mjs  one-time core patch: subagent reasoning-effort routing
 scripts/verify-inline-chat.mjs  browser check: inline cards + Swarm tab
 cordis.patch.yml   bundle patch layer
 package.json       bundle + client manifests
+docs/DSH_FRAMEWORK.md  how DSH works (host/client/BE↔FE wiring) for developing this plugin
 ```
 
 ## Tests & demo runs
