@@ -58,7 +58,7 @@ async function main() {
     await page.waitForTimeout(5000);
 
     await page.locator(".das-swarm-card").first().waitFor({ state: "visible", timeout: 15000 });
-    check("live swarm card present (input.dock)", true);
+    check("inline swarm card present (turnTail)", true);
 
     // 1. Agent click → detail popup.
     await page.getByText("HTML Writer", { exact: true }).first().click({ timeout: 5000 });

@@ -89,6 +89,11 @@ async function main() {
       check("card shows the ideal header", text.includes("Agent Swarm"), text.slice(0, 40));
       const box = await inlineCard.first().boundingBox().catch(() => null);
       check("card is card-width (<=720px)", box !== null && box.width <= 720, `width=${box?.width}`);
+      // The card is inline in the message flow (near the top of the transcript),
+      // not pinned to the bottom above the composer.
+      check("card is in the message flow (not bottom-pinned)", box !== null && box.y < 400, `top=${box?.y}`);
+      const theme = await inlineCard.first().getAttribute("data-theme").catch(() => null);
+      check("card follows the host theme (not black)", theme === "light" || theme === "dark", `theme=${theme}`);
     }
 
     // The Swarm tab (智能体群组) is the PRIMITIVE thin view — basic data only,
