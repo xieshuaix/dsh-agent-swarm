@@ -7,7 +7,9 @@
 
 import { runSessionTest } from "./_run-session-test.mjs";
 
-const PROMPT = `Build a tiny "click counter" web app in this dedicated test workspace (it starts empty and is isolated from other tests — do not reuse or read files from any other workspace). Keep it minimal — it should take about a minute.
+const PROMPT = `Build a tiny "click counter" web app from scratch in this dedicated test workspace.
+
+Workspace: "{WORKSPACE_DIR}" (it starts empty and is isolated from other tests). Write every file NEW — do NOT reuse, copy, or adopt any existing code or file as your product, and do NOT read files from any other workspace. Keep it minimal — it should take about a minute.
 
 First write an AGENTS.md file in this workspace that defines each team role in one line (HTML builder, CSS builder, JS builder, docs writer) — this is the shared role definition the swarm UI surfaces.
 
@@ -19,7 +21,7 @@ Then use the swarm tool to recruit 4 subagents, each with model deepseek-v4-flas
 
 After recruiting, set the plan, confirm execution, and when they finish, record a one-paragraph summary with the swarm tool.`;
 
-runSessionTest(PROMPT, process.argv[2] ?? "006").catch((error) => {
+runSessionTest(PROMPT, process.argv[2] ?? "006", "toy").catch((error) => {
   console.error(`\n❌ ${String(error?.message ?? error)}`);
   process.exitCode = 1;
 });

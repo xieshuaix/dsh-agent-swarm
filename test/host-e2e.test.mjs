@@ -821,6 +821,8 @@ test("state() derives presentation metadata and topology for the ideal UI", asyn
     // Row 5: composed system prompt; row 6: workspace AGENTS.md.
     assert.match(projection.agents[0].systemPrompt, /Task: build/);
     assert.equal(projection.agents[0].agentsMd, "# agent instructions");
+    // The workspace root is surfaced so the UI can resolve artifact paths.
+    assert.equal(projection.workspaceRoot, cwd);
 
     // Row 9: discrete progress mode follows an outlined plan; row 16: wave.
     assert.equal(projection.agents[0].progressMode, "discrete");

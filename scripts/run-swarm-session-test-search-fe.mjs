@@ -7,7 +7,9 @@
 
 import { runSessionTest } from "./_run-session-test.mjs";
 
-const PROMPT = `Build a multi-modal search API in this workspace.
+const PROMPT = `Build a multi-modal search API from scratch in this dedicated test workspace.
+
+Workspace: "{WORKSPACE_DIR}" (it starts empty and is isolated from other tests). Write every file NEW — do NOT reuse, copy, or adopt any existing code or file as your product, and do NOT read files from any other workspace.
 
 Spawn 4 subagents to build it in parallel:
 1. One builds the search frontend.
@@ -17,7 +19,7 @@ Spawn 4 subagents to build it in parallel:
 
 When all 4 subagents have finished, write a one-paragraph summary of what was built.`;
 
-runSessionTest(PROMPT, process.argv[2] ?? "005").catch((error) => {
+runSessionTest(PROMPT, process.argv[2] ?? "005", "search-fe").catch((error) => {
   console.error(`\n❌ ${String(error?.message ?? error)}`);
   process.exitCode = 1;
 });
