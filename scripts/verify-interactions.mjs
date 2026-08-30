@@ -90,12 +90,18 @@ async function main() {
 
     // 4. Canvas → agent node → "Open Workspace" → the agent workspace panel
     //    (and the canvas must close so the panel isn't hidden behind it).
+    //    The node card is keyed by the agent id, which the swarm tool derives
+    //    from the name (lowercase + non-word → "-"). Clicking by name would hit
+    //    the chat's objective text (still in the DOM behind the canvas overlay).
     await canvasBtn.click({ timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(1200);
-    const node = page.getByText(AGENT_NAME).first(); // node name div bubbles to the node card
-    await node.click({ timeout: 5000 }).catch(() => {});
+    const slug = AGENT_NAME.toLowerCase().replace(/\W+/g, "-");
+    const node = page.getByTestId(`node-${slug}`).first();
+    // `force` skips the hover actionability check: hovering the node reveals its
+    // edge anchor dots, which transiently cover the click point in headless.
+    await node.click({ timeout: 5000, force: true }).catch(() => {});
     await page.waitForTimeout(900);
-    const openWsBtn = page.getByText("Open Workspace", { exact: true }).first();
+    const openWsBtn = page.getByText("Open Workspace").first(); // button text is "⊞ Open Workspace"
     check("canvas agent panel has Open Workspace", await openWsBtn.isVisible().catch(() => false));
     await openWsBtn.click({ timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(1400);
