@@ -54,7 +54,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  */
 export async function runSessionTest(prompt, round, testName = "experiment") {
   const n = String(Number.parseInt(round, 10) || 5).padStart(3, "0");
-  const title = `swarm experiment ${n}`;
+  // Session title carries the test name + round so different tests/rounds are
+  // distinguishable in the sidebar (e.g. "scale 001", "toy 006").
+  const title = `${testName} ${n}`;
   const testDirName = `${testName}-${n}`;
   const wsPath = join(TESTS_ROOT, testDirName);
 
