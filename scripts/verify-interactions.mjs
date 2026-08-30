@@ -88,6 +88,22 @@ async function main() {
     const body = (await page.locator("body").innerText().catch(() => "")) ?? "";
     check("percent mode applies to agent cards", body.includes("Task progress"));
 
+    // 4. Canvas → agent node → "Open Workspace" → the agent workspace panel
+    //    (and the canvas must close so the panel isn't hidden behind it).
+    await canvasBtn.click({ timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(1200);
+    const node = page.getByText(AGENT_NAME).first(); // node name div bubbles to the node card
+    await node.click({ timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(900);
+    const openWsBtn = page.getByText("Open Workspace", { exact: true }).first();
+    check("canvas agent panel has Open Workspace", await openWsBtn.isVisible().catch(() => false));
+    await openWsBtn.click({ timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(1400);
+    const wsOpen = (await page.getByText("Artifacts", { exact: true }).count().catch(() => 0)) >= 1;
+    check("open workspace (from canvas) opens the agent panel", wsOpen);
+    const canvasClosed = (await page.getByTestId("link-count").count().catch(() => 0)) === 0;
+    check("canvas closes when the agent panel opens", canvasClosed);
+
     const relevantErrors = errors.filter((e) => !/favicon|net::ERR|Failed to load resource/i.test(e));
     check("no page errors during load", relevantErrors.length === 0, relevantErrors.slice(0, 2).join(" | "));
   } finally {

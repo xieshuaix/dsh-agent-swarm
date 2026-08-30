@@ -715,6 +715,45 @@ test("root-level files are captured as artifacts (not just top-level dirs)", asy
   }
 });
 
+// Regression: real DSH stores tool/call arguments as a JSON string under
+// `data.arguments` with a `file_path` key (not `data.input`). Attribution must
+// read that shape AND match the path precisely so a write's *content* naming a
+// sibling file can't mis-attribute it.
+test("artifacts read data.arguments (JSON string) and match file_path precisely", async () => {
+  const restore = isolateStore();
+  let cwd;
+  try {
+    cwd = mkdtempSync(join(tmpdir(), "dsh-agent-swarm-args-"));
+    const subagents = createFakeSubagents();
+    const agents = { get: (id) => id ? { id, session: { id, header: { cwd } }, options: {} } : undefined, list: () => [] };
+    const sessions = {
+      get: (id) => (id ? { id, events: [
+        { type: "tool/call", data: { name: "write", arguments: JSON.stringify({ file_path: join(cwd, "README.md"), content: "## Files\n- app.js\n- index.html" }) } },
+        { type: "tool/call", data: { name: "read", arguments: JSON.stringify({ file_path: join(cwd, "app.js") }) } }
+      ] } : undefined),
+      list: () => []
+    };
+    const fake = createFakeCtx({ subagents, agents, sessions });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+
+    await swarm.spawn(SESSION, { id: "a1", name: "Docs", role: "docs", task: "write README" });
+    // Sibling files exist at the root but were written by OTHER agents.
+    writeFileSync(join(cwd, "README.md"), "# readme");
+    writeFileSync(join(cwd, "app.js"), "console.log(1)");
+    writeFileSync(join(cwd, "index.html"), "<h1>hi</h1>");
+    subagents._pending[0].settle({ stopReason: "completed", output: [] });
+    await new Promise((r) => setImmediate(r));
+
+    const agent = swarm.state(SESSION).agents[0];
+    const names = (agent.artifacts ?? []).map((a) => a.name).sort();
+    assert.deepEqual(names, ["README.md"]);
+  } finally {
+    restore();
+    if (cwd) rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 test("artifacts are attributed via .dsh-subagent.json markers after spawnMeta is lost", async () => {
   const restore = isolateStore();
   let cwd;
@@ -915,6 +954,7 @@ test("recruit → confirm propagates per-agent model, rolePrompt, and outlinePla
         rolePrompt: "You are a terse nutritionist.", outlinePlan: true
       }
     ]);
+    swarm.setPlan(SESSION, [{ id: "p1", title: "list fruits", ownerId: "a1" }], { objective: "ship a fruit list" });
     await swarm.confirm(SESSION);
 
     assert.equal(subagents.calls.length, 1);
@@ -922,7 +962,13 @@ test("recruit → confirm propagates per-agent model, rolePrompt, and outlinePla
     assert.equal(call.request.agentOptions.model, "deepseek-v4-flash");
     assert.equal(call.request.agentOptions.reasoningEffort, "low");
     assert.equal(call.request.persona, "You are a terse nutritionist.");
-    assert.match(call.request.prompt[0].text, /outline your plan/);
+    const prompt = call.request.prompt[0].text;
+    assert.match(prompt, /outline your plan/);
+    // The composed prompt (not an explicit prompt) keeps the Role + Objective
+    // labels so the persisted systemPrompt reflects the persona and goal.
+    assert.match(prompt, /Role: You are a terse nutritionist\./);
+    assert.match(prompt, /Objective: ship a fruit list/);
+    assert.match(prompt, /Task: list 3 fruits/);
   } finally {
     restore();
   }
