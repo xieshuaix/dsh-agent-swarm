@@ -78,17 +78,17 @@ async function main() {
     // Wait for the chat view to settle (turn tail nodes render).
     await page.waitForTimeout(5000);
 
-    // The inline swarm card: mounted at the dispatch turn via the turnTail seat.
-    const inlineCard = page.locator(".das-inline");
+    // The live swarm card (input.dock seat, above the composer): a centered
+    // 720px card, not a full-width strip.
+    const inlineCard = page.locator(".das-swarm-card");
     const inlineCount = await inlineCard.count().catch(() => 0);
-    check("inline swarm card mounts in chat", inlineCount >= 1, `count=${inlineCount}`);
+    check("live swarm card mounts in chat", inlineCount >= 1, `count=${inlineCount}`);
 
     if (inlineCount >= 1) {
       const text = (await inlineCard.first().innerText().catch(() => "")) ?? "";
-      check("inline card shows the swarm header", /智能体群组|Swarm/.test(text), text.slice(0, 40));
-      // The ideal panel mounts inside the card (its own "Agent Swarm" header).
-      const inner = await inlineCard.first().locator("text=/Agent Swarm|Complete|/").first().isVisible().catch(() => false);
-      check("ideal SwarmPanel rendered inside the card", inner);
+      check("card shows the ideal header", text.includes("Agent Swarm"), text.slice(0, 40));
+      const box = await inlineCard.first().boundingBox().catch(() => null);
+      check("card is card-width (<=720px)", box !== null && box.width <= 720, `width=${box?.width}`);
     }
 
     // The Swarm tab (智能体群组) is the PRIMITIVE thin view — basic data only,
@@ -99,7 +99,9 @@ async function main() {
     if (tabVisible) {
       await tab.click();
       await page.waitForTimeout(2500);
-      const tabText = (await page.locator("body").innerText().catch(() => "")) ?? "";
+      // Scope to the tab's own thin view (.das-root), not the whole body — the
+      // ideal card legitimately stays in the composer dock.
+      const tabText = (await page.locator(".das-root").first().innerText().catch(() => "")) ?? "";
       check("Swarm tab renders the primitive thin view", /Build a minimal|HTML Writer/.test(tabText) && !/Agent Swarm|Canvas/.test(tabText));
     }
 
