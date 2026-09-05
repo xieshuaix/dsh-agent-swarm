@@ -97,6 +97,38 @@ test("confirm spawns every queued agent as a one-shot subagent", async () => {
   }
 });
 
+test("recruit into a completed swarm re-opens planning so the new agents run", async () => {
+  const restore = isolateStore();
+  try {
+    const subagents = createFakeSubagents();
+    const fake = createFakeCtx({ subagents });
+    apply(fake.ctx, {});
+    const swarm = fake.provided.swarm;
+
+    // First batch runs to completion.
+    swarm.recruit(SESSION, [{ id: "a1", name: "Aria", role: "builder", task: "build" }]);
+    swarm.setPlan(SESSION, [{ id: "p1", title: "build", status: "pending", ownerId: "a1" }]);
+    await swarm.confirm(SESSION);
+    for (const pending of subagents._pending) pending.settle({ stopReason: "completed" });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(swarm.state(SESSION).phase, "complete");
+
+    // Recruiting a NEW agent into the completed swarm must re-open "planning"
+    // (not stay "complete"), otherwise confirm refuses and the agent stays queued.
+    const r = swarm.recruit(SESSION, [{ id: "a2", name: "Blake", role: "reviewer", task: "review" }]);
+    assert.equal(r.swarm.phase, "planning");
+
+    const before = subagents._pending.length;
+    const confirmed = await swarm.confirm(SESSION);
+    assert.equal(confirmed.ok, true);
+    assert.equal(confirmed.swarm.phase, "executing");
+    assert.equal(subagents._pending.slice(before).length, 1, "the newly recruited agent was spawned");
+    assert.ok(confirmed.swarm.agents.some((a) => a.id === "a2" && a.status === "active"));
+  } finally {
+    restore();
+  }
+});
+
 test("spawn launches a real one-shot subagent and folds completion into the roster", async () => {
   const restore = isolateStore();
   try {
