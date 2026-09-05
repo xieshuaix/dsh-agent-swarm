@@ -26,6 +26,28 @@ it takes.
 - **Confirm before running** — a human (or the model) approves or rejects the
   orchestration before execution starts.
 - **Massive teams** — 20+ agents at a time, with a concurrency limit.
+- **Auto-resume the main agent** — opt-in (`resumeMainWhenDone: true` on
+  `confirm`, or `/swarm confirm --resumeWhenDone`): when the swarm finishes, the
+  plugin wakes the idle main agent so it reviews the subagents' work and follows
+  up instead of stalling.
+
+## How it compares to native subagents & workflow
+
+DSH already ships two multi-agent primitives — raw **subagents**
+(`ctx.subagents`) and the scripted **workflow** runner. This plugin is the
+natural-language, *observable* layer on top: the main agent drives the whole
+lifecycle with one tool, the run stays visible live, and control returns to the
+main agent when the team is done.
+
+| Aspect | dsh-agent-swarm | Native subagents | Workflow |
+|---|---|---|---|
+| Driven by | one `swarm` tool in natural language | code (`ctx.subagents.start`) | a JS orchestration script |
+| Lifecycle | recruit → plan → **confirm** → execute → summarize | spawn → await result | phases → pipeline / parallel |
+| Approval gate before running | ✅ `confirm` (human or model) | ❌ | ❌ |
+| Concurrency limit | ✅ explicit, wave-drained | ❌ (caller-managed) | ✅ script `concurrency` |
+| Live orchestration board | ✅ swarm card + canvas + per-agent detail | ❌ | ❌ |
+| Resume the main agent when done | ✅ `resumeMainWhenDone` | ❌ | ❌ |
+| Best for | interactive, reviewable swarms you watch and follow up on | a few ad-hoc helpers | bounded, repetitive fan-out at scale |
 
 ## At a glance
 
@@ -124,6 +146,7 @@ too), which makes it a handy debugging companion when developing the swarm UI.
 | **Plan** | `ctx.swarm.setPlan(...)` records the main agent's plan; `ctx.swarm.delegatePlan(...)` spawns a one-shot *planner* subagent and adopts its structured plan. |
 | **Confirm / execute** | `ctx.swarm.confirm(...)` moves `awaiting_confirm → executing`; subagent `subagent/start` / `subagent/end` lifecycle edges update roster status and progress. |
 | **Summarize** | `ctx.swarm.summarize(session, text)` closes the swarm and records the summary. |
+| **Resume** | opt-in `resumeMainWhenDone` on `confirm` — once the swarm reaches `complete`, the plugin wakes the idle main agent (`agent.followup`) so it reviews the subagents' work and continues. |
 
 The **main agent** drives these through the agent-facing `swarm` **tool** (and
 the model-facing swarm-state context); the `/swarm` slash command is the

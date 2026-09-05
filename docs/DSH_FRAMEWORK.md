@@ -99,8 +99,9 @@ reads the child's events later.
 
 The model drives the whole lifecycle through ONE tool. Its `parameters` are:
 `action` (enum) + `agents[]` (recruit) + `plan[]` (plan) + `objective` +
-`concurrency` + `summary`. `recruit` derives a stable agent id from `name`
-(`name.toLowerCase().replace(/\W+/g, "-")`) so plan `ownerId`s can reference it.
+`concurrency` + `summary` + `resumeMainWhenDone` (confirm, opt-in). `recruit`
+derives a stable agent id from `name` (`name.toLowerCase().replace(/\W+/g, "-")`)
+so plan `ownerId`s can reference it.
 
 ### Subagent lifecycle
 
@@ -112,6 +113,11 @@ The model drives the whole lifecycle through ONE tool. Its `parameters` are:
    child's early `assistant/message`), artifacts/todos/logs (read from `ctx.sessions`
    while still loaded), persisted to the store.
 5. `summarize` closes (`phase: "complete"`).
+6. When the swarm reaches `complete` and `resumeMainWhenDone` was set, the plugin
+   resolves the main agent (`ctx.agents`) and, if it is `idle`, queues a follow-up
+   turn via `agent.followup(...)` — or, if it is still `running`, waits on
+   `agent.whenIdle()` first — so the main agent reviews the subagents' work and
+   continues. Idempotent via the persisted `resumeSent` flag.
 
 `subagent/start` / `subagent/end` events mirror the roster too (belt-and-suspenders).
 
@@ -293,10 +299,15 @@ The fake ctx (`fake-ctx.mjs`) implements exactly the surface `apply(ctx)` touche
 5. **Subagent seam** — `ctx.subagents.start(provider, { label, prompt, parent, signal, persona, agentOptions })` unchanged; `run.id`/`run.result`/`run.dispose` still the run contract.
 6. **`ctx.sessions.get(childId)`** still returns `{ events: [...] }` for a child while
    it runs (garbage-collected after — hence persistence at settle time).
-7. **Web server** — `scope.webServer.register({ kind: "prefix"/"route", path, handler })` unchanged; the `/swarm/state` + SSE + `/dsh-agent-swarm/ui` routes still bind.
-8. **Tool API** — `ctx.tools.register({ name, description, parameters, output, execute })` unchanged; the model-facing tool is still reachable (this is how the main agent drives the swarm).
-9. **`reasoningEffort` core patch** — `scripts/patch-core.mjs` edits
-   `dsh-agent-loop`'s request builder; re-apply after every DSH upgrade.
+7. **Agent seam (auto-resume)** — `ctx.agents.get(sessionId)` still returns the live
+   `Agent` with `status: 'idle' | 'running'`, `followup(message)`, and `whenIdle()`;
+   `agent.followup({ id, role: 'user', content: [{type:'text',text}], source:{kind:'user'} })`
+   still queues an ordinary turn and wakes the driver (the `resumeMainWhenDone` hook
+   depends on all three).
+8. **Web server** — `scope.webServer.register({ kind: "prefix"/"route", path, handler })` unchanged; the `/swarm/state` + SSE + `/dsh-agent-swarm/ui` routes still bind.
+9. **Tool API** — `ctx.tools.register({ name, description, parameters, output, execute })` unchanged; the model-facing tool is still reachable (this is how the main agent drives the swarm).
+10. **`reasoningEffort` core patch** — `scripts/patch-core.mjs` edits
+    `dsh-agent-loop`'s request builder; re-apply after every DSH upgrade.
 
 ---
 
